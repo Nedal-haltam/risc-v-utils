@@ -1,0 +1,11 @@
+D:\GitHub Repos\risc-v-utils\LibUtil\bin\Debug\net8.0\LibUtils.deps.json
+D:\GitHub Repos\risc-v-utils\LibUtil\bin\Debug\net8.0\LibUtils.dll
+D:\GitHub Repos\risc-v-utils\LibUtil\bin\Debug\net8.0\LibUtils.pdb
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\LibUtils.GeneratedMSBuildEditorConfig.editorconfig
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\LibUtils.AssemblyInfoInputs.cache
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\LibUtils.AssemblyInfo.cs
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\LibUtils.csproj.CoreCompileInputs.cache
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\LibUtils.dll
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\refint\LibUtils.dll
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\LibUtils.pdb
+D:\GitHub Repos\risc-v-utils\LibUtil\obj\Debug\net8.0\ref\LibUtils.dll
