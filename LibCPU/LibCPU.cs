@@ -68,10 +68,10 @@ namespace LibCPU {
     public static class RISCV
     {
 
-        public const int MAX_CLOCKS = 100 * 1000 * 1000;
-        public const int HANDLER_ADDR = 1000;
-        public const int IM_SIZE = 2048;
-        public const int DM_SIZE = 4096;
+        public static int MAX_CLOCKS = 100 * 1000 * 1000;
+        public static int HANDLER_ADDR = 1000;
+        public static int IM_SIZE;
+        public static int DM_SIZE;
 
 
         public const string EXCEPTION = "EXCEPTION";
@@ -497,7 +497,6 @@ namespace LibCPU {
         static public bool hlt;
         static public int targetaddress;
         static public int predictorState;
-        public Dictionary<int, bool> BranchLUT = [];
 
         public enum PCsrc { PCplus1, branchTarget, exception, none }
         public PCsrc pcsrc;
@@ -1372,7 +1371,6 @@ namespace LibCPU {
         public List<string> IM; // Instruction Mem
         public List<BranchPredictorEntry> dataset = [];
         public string BranchHistory = "0000000000000000";
-        public Dictionary<int, bool> BranchLUT = [];
 
         Instruction IFID;
         Instruction IDEX1;
@@ -1504,14 +1502,7 @@ namespace LibCPU {
             else
             {
                 int index = decoded.PC;
-                if (BranchLUT.TryGetValue(index, out bool value))
-                {
-                    prediction = value;
-                }
-                else
-                {
-                    prediction = (state == 2 || state == 3);
-                }
+                prediction = (state == 2 || state == 3);
             }
 
             if (prediction)
