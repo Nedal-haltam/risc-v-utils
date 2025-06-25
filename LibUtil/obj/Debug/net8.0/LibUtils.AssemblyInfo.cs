@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LibUtils")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c68b2be7cbe9a3077e823167698226e9a86653e")]
 [assembly: System.Reflection.AssemblyProductAttribute("LibUtils")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LibUtils")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

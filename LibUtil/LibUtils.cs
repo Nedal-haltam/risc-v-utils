@@ -180,6 +180,30 @@ namespace LibUtils
 
             return sb;
         }
+        public static StringBuilder GetIMMIF(List<string> mc, int width, int depth, int from_base)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(GetMIFHeader(width, depth, "HEX", "HEX"));
+            sb.Append(ToMIFentries(0, mc, width, from_base));
+            sb.Append(GetMIFTail());
+
+            return sb;
+        }
+        public static string get_entry_IM_INIT(string mc, string inst, int i)
+        {
+            string hex = Convert.ToInt32(mc, 2).ToString("X").PadLeft(8, '0');
+            return ($"InstMem[{i,2}] <= 32'h{hex};// {inst,-20}").Trim();
+        }
+        public static List<string> get_IM_INIT(List<string> mc, List<string> curr_insts)
+        {
+            List<string> IM_INIT = [];
+            for (int i = 0; i < mc.Count; i++)
+            {
+                IM_INIT.Add(get_entry_IM_INIT(mc[i], curr_insts[i], i));
+            }
+            return IM_INIT;
+        }
+
         public static Dictionary<int, bool> ReadMLPrediction(string filepath)
         {
             string[] list = File.ReadAllLines(filepath);
