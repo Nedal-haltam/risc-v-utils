@@ -1,4 +1,5 @@
 ﻿
+using System.Diagnostics;
 using System.Text;
 
 namespace Assembler
@@ -394,30 +395,71 @@ namespace Assembler
         {
             return mnem == "beq" || mnem == "bne";
         }
-        bool Is_pseudo_branch(string mnem)
+        bool Is_pseudo(string inst)
         {
-            return mnem == "bltz" || mnem == "bgez";
+            return inst == "bltz" || 
+                   inst == "bgez" || 
+                   inst == "li"   || 
+                   inst == "la"   || 
+                   inst == "call" || 
+                   inst == "ret" || 
+                   inst == "mv";
         }
-        bool Is_pseudo(Instruction inst)
+        static int LineNumber([System.Runtime.CompilerServices.CallerLineNumber] int LineNumber = 0)
         {
-            return Is_pseudo_branch(inst.m_tokens[0].m_value)/* || other pseudo insts*/;
+            return LineNumber;
+        }
+        static string FilePath([System.Runtime.CompilerServices.CallerFilePath] string FilePath = "")
+        {
+            return FilePath;
         }
         List<Instruction> GetPseudo(Instruction inst)
         {
-            if (Is_pseudo_branch(inst.m_tokens[0].m_value) && inst.m_tokens.Count == 3)
+            string mnem = inst.m_tokens[0].m_value;
+            if ((mnem == "bltz" || mnem == "bgez") && inst.m_tokens.Count == 3)
             {
                 string branch = "";
-                if (inst.m_tokens[0].m_value == "bltz")
+                if (mnem == "bltz")
                 {
                     branch = "bne";
                 }
-                else if (inst.m_tokens[0].m_value == "bgez")
+                else if (mnem == "bgez")
                 {
                     branch = "beq";
                 }
                 return [
                     new([new("slt"), new("$at"), new($"{inst.m_tokens[1].m_value}"), new("$0") ]),
                     new([new(branch), new("$at"), new("$0"), new($"{inst.m_tokens[2].m_value}") ]),
+                ];
+            }
+            else if (mnem == "li" && inst.m_tokens.Count == 3)
+            {
+                return [
+                    new([new("ori"), new(inst.m_tokens[1].m_value), new("zero"), new(inst.m_tokens[2].m_value)])
+                ];
+            }
+            else if (mnem == "la" && inst.m_tokens.Count == 3)
+            {
+                return [
+                    new([new("ori"), new(inst.m_tokens[1].m_value), new("zero"), new(inst.m_tokens[2].m_value)])
+                ];
+            }
+            else if (mnem == "call")
+            {
+                return [
+                    new([new("jal"), new(inst.m_tokens[1].m_value)])
+                ];
+            }
+            else if (mnem == "mv")
+            {
+                return [
+                    new([new("or"), new(inst.m_tokens[1].m_value), new(inst.m_tokens[2].m_value), new("zero")])
+                ];
+            }
+            else if (mnem == "ret")
+            {
+                return [
+                    new([new("jr"), new("ra")])
                 ];
             }
             else
@@ -432,7 +474,7 @@ namespace Assembler
         {
             for (int i = 0; i < program.instructions.Count; i++)
             {
-                if (Is_pseudo(program.instructions[i]))
+                if (Is_pseudo(program.instructions[i].m_tokens[0].m_value))
                 {
                     List<Instruction> replace = GetPseudo(program.instructions[i]);
                     program.instructions.RemoveAt(i);
