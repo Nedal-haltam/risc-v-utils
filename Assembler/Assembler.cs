@@ -1,8 +1,4 @@
 ﻿
-
-
-using System.ComponentModel.Design;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Assembler
@@ -53,14 +49,6 @@ namespace Assembler
 
     public class Assembler
     {
-        public static void Assert(string msg)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Error.WriteLine(msg);
-            Console.ResetColor();
-            Environment.Exit(1);
-        }
-
         public bool lblinvlabel = false;
         public bool lblmultlabels = false;
         public bool lblINVINST = false;
@@ -69,13 +57,43 @@ namespace Assembler
         string m_curr_inst = "";
         int m_curr_index = 0;
         int curr_inst_index;
-        readonly List<string> REG_LIST =
-        [ "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
-          "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"];
-        // The instruction type is the main token in a given instruction and should be known the first token in an instruction (first word)
-        // the opcodes is a dictionary the you give it a certain opcode (in words) and get beack the binaries (or machine code) corresponding to that opcode
-        // take a look to know what to expect because the binary might be different depending on the opcode some of them only opcode or with func3 or even with func7
-        readonly Dictionary<string, string> opcodes = new()//{ "inst"     , "opcode/funct" },
+        readonly Dictionary<string, int> REG_LIST = new()
+        {
+            {"zero", 0},
+            {"ra"  , 1},
+            {"sp"  , 2},
+            {"gp"  , 3},
+            {"tp"  , 4},
+            {"t0"  , 5},
+            {"at"  , 5},
+            {"t1"  , 6},
+            {"t2"  , 7},
+            {"s0"  , 8},
+            {"s1"  , 9},
+            {"a0"  , 10},
+            {"a1"  , 11},
+            {"a2"  , 12},
+            {"a3"  , 13},
+            {"a4"  , 14},
+            {"a5"  , 15},
+            {"a6"  , 16},
+            {"a7"  , 17},
+            {"s2"  , 18},
+            {"s3"  , 19},
+            {"s4"  , 20},
+            {"s5"  , 21},
+            {"s6"  , 22},
+            {"s7"  , 23},
+            {"s8"  , 24},
+            {"s9"  , 25},
+            {"s10" , 26},
+            {"s11" , 27},
+            {"t3"  , 28},
+            {"t4"  , 29},
+            {"t5"  , 30},
+            {"t6"  , 31},
+        };
+        readonly Dictionary<string, string> opcodes = new()//{ "inst"     , "`opcode` or `funct`" },
         {
             { "nop"  , "000000" },
             { "hlt"  , "111111" },
@@ -114,63 +132,95 @@ namespace Assembler
             { "jal"  , "000011" },
 
         };
-        InstructionType? GetInstType(string name)
+        InstructionType GetInstType(string name)
         {
-            return name switch
+            switch (name)
             {
-                "add" or "addu" or "sub" or "subu" or "and" or "or" or "xor" or "nor" or "slt" or "seq" or "sne" or 
-                "sgt" or "sll" or "srl" or "jr" or "nop" or "mul" => InstructionType.rtype,
-                "addi" or "andi" or "ori" or "xori" or "slti" or "lw" or "sw" or "beq" or "bne" or "hlt" => InstructionType.itype,
-                                                                                                                  
-                "j" or "jal" => InstructionType.jtype,
-                _ => null,
-            };
+                case "add":
+                case "addu":
+                case "sub":
+                case "subu":
+                case "and":
+                case "or":
+                case "xor":
+                case "nor":
+                case "slt":
+                case "seq":
+                case "sgt":
+                case "sll":
+                case "srl":
+                case "jr":
+                case "nop":
+                case "sne":
+                case "mul":
+                    return InstructionType.rtype;
+                case "addi":
+                case "andi":
+                case "ori":
+                case "xori":
+                case "slti":
+                case "lw":
+                case "sw":
+                case "beq":
+                case "bne":
+                case "hlt":
+                    return InstructionType.itype;
+                case "j":
+                case "jal":
+                    return InstructionType.jtype;
+                default:
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"no type for instruction `{name}`\n", 1);
+                    return InstructionType.rtype;
+            }
         }
 
-        string? Getregindex(string reg)
+        string Getregindex(string reg)
         {
-            if (reg.StartsWith('$'))
+            if (reg.StartsWith('$') || reg.StartsWith('x'))
             {
-
-                string name = reg[1..];
-                if (byte.TryParse(name, out byte usb) && usb >= 0 && usb <= 31)
+                reg = reg[1..];
+                if (REG_LIST.TryGetValue(reg, out int index))
+                {
+                    return Convert.ToString(index, 2).PadLeft(5, '0');
+                }
+                else if (byte.TryParse(reg, out byte usb) && usb >= 0 && usb <= 31)
                 {
                     return Convert.ToString(usb, 2).PadLeft(5, '0');
                 }
                 else
                 {
-                    if (!REG_LIST.Contains(name))
-                    {
-                        return null;
-                    }
-                    return Convert.ToString(REG_LIST.IndexOf(name), 2).PadLeft(5, '0');
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register value `{reg}`\n", 1);
+                    return "";
                 }
             }
             else
-                return null;
-
+            {
+                if (!REG_LIST.ContainsKey(reg))
+                {
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register name : `{reg}`\n", 1);
+                }
+                return Convert.ToString(REG_LIST[reg], 2).PadLeft(5, '0');
+            }
         }
-        string? Getrtypeinst(Instruction inst)
+        string Getrtypeinst(Instruction inst)
         {
             string mc;
 
             if (inst.m_tokens[0].m_value == "jr") // jr x12
             {
                 if (inst.m_tokens.Count != 2)
-                    return null;
-                string? rs1 = Getregindex(inst.m_tokens[1].m_value);
-                if (rs1 == null) return null;
+                    Shartilities.Log(Shartilities.LogType.ERROR, "invalid jr instruction\n", 1);
+                string rs1 = Getregindex(inst.m_tokens[1].m_value);
+
                 mc = "000000" + rs1 + "000000000000000" + opcodes[inst.m_tokens[0].m_value];
             }
             else
             {
                 if (inst.m_tokens.Count != 4)
-                    return null;
-                string? rd = Getregindex(inst.m_tokens[1].m_value);
-                string? rs1 = Getregindex(inst.m_tokens[2].m_value);
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invlid R-Type instruction\n", 1);
+                string rd = Getregindex(inst.m_tokens[1].m_value);
+                string rs1 = Getregindex(inst.m_tokens[2].m_value);
                 string funct = opcodes[inst.m_tokens[0].m_value];
-
-                if (rd == null || rs1 == null) return null;
 
                 if (inst.m_tokens[0].m_value == "sll" || inst.m_tokens[0].m_value == "srl") // sll x1, x2, 2
                 {
@@ -188,7 +238,7 @@ namespace Assembler
                         shamt = shamt.PadLeft(5, '0');
                     }
                     else
-                        return null;
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid shift amount `{shamt}`\n", 1);
                     mc = "000000"
                         + "00000"
                         + rs1
@@ -198,9 +248,9 @@ namespace Assembler
                 }
                 else
                 {
+                    // 11111 00000 00001 00000101010
+                    // 11111 00000 00101 00000101010
                     string? rs2 = Getregindex(inst.m_tokens[3].m_value);
-                    if (rs2 == null)
-                        return null;
                     mc = "000000"
                         + rs1
                         + rs2
@@ -211,16 +261,21 @@ namespace Assembler
             } 
             return mc;
         }
-        string? GetImmed(string immed)
+        string GetImmed(string immed)
         {
             // andi, ori, xori (they do zero extend)
             if ((immed.StartsWith("0x") || immed.StartsWith("0X")))
             {
-                short temp;
-                try { temp = Convert.ToInt16(immed, 16); }
-                catch { return null; }
-
-                return Convert.ToString(temp, 2).PadLeft(16, '0');
+                try
+                {
+                    short temp = Convert.ToInt16(immed, 16);
+                    return Convert.ToString(temp, 2).PadLeft(16, '0');
+                }
+                catch
+                {
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unable to convert to 16-bit signed immediate : `{immed}`\n", 1);
+                    return "";
+                }
             }
             else if (ushort.TryParse(immed, out ushort usb))
             {
@@ -233,25 +288,24 @@ namespace Assembler
                 return immed.PadLeft(16, immed[0]);
             }
             else
-                return null;
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate : `{immed}`\n", 1);
+            return "";
         }
-        string? Getitypeinst(Instruction inst)
+        string Getitypeinst(Instruction inst)
         {
             if (inst.m_tokens.Count > 0 && (inst.m_tokens[0].m_value == "sw" || inst.m_tokens[0].m_value == "lw") && inst.m_tokens.Count != 6)
-                return null;
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invlid load/store instruction\n", 1);
             else if (!(inst.m_tokens[0].m_value == "sw" || inst.m_tokens[0].m_value == "lw") && inst.m_tokens.Count != 4)
-                return null;
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid I-Type instruction\n", 1);
             string mc;
             string opcode = opcodes[inst.m_tokens[0].m_value];
 
             if (Isbranch(inst.m_tokens[0].m_value))
             {
-                string? reg1 = Getregindex(inst.m_tokens[1].m_value);
-                string? reg2 = Getregindex(inst.m_tokens[2].m_value);
-                if (reg1 == null || reg2 == null)
-                    return null;
+                string reg1 = Getregindex(inst.m_tokens[1].m_value);
+                string reg2 = Getregindex(inst.m_tokens[2].m_value);
                 if (!labels.ContainsKey(inst.m_tokens[3].m_value))
-                    return null;
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"label `{inst.m_tokens[3].m_value}` not found\n", 1);
                 string immed = inst.m_tokens[3].m_value;
                 immed = (labels[immed] - curr_inst_index).ToString();
                 if (ushort.TryParse(immed, out ushort usb))
@@ -262,33 +316,25 @@ namespace Assembler
                     immed = immed.PadLeft(16, immed[0]);
                 }
                 else
-                    return null;
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immed for branch instruction `{immed}`\n", 1);
                 string rs1 = reg1;
                 string rs2 = reg2;
                 mc = opcode + rs1 + rs2 + immed;
             }
             else if (inst.m_tokens[0].m_value == "lw" || inst.m_tokens[0].m_value == "sw")
             { // sw $1, 0($1)
-                string? reg1 = Getregindex(inst.m_tokens[1].m_value);
-                string? reg2 = Getregindex(inst.m_tokens[4].m_value);
-                if (reg1 == null || reg2 == null)
-                    return null;
-                string? immed = GetImmed(inst.m_tokens[2].m_value);
-                if (immed == null)
-                    return null;
+                string reg1 = Getregindex(inst.m_tokens[1].m_value);
+                string reg2 = Getregindex(inst.m_tokens[4].m_value);
+                string immed = GetImmed(inst.m_tokens[2].m_value);
                 string rd = reg1;
                 string rs1 = reg2;
                 mc = opcode + rs1 + rd + immed;
             }
             else
             {
-                string? reg1 = Getregindex(inst.m_tokens[1].m_value);
-                string? reg2 = Getregindex(inst.m_tokens[2].m_value);
-                if (reg1 == null || reg2 == null)
-                    return null;
-                string? immed = GetImmed(inst.m_tokens[3].m_value);
-                if (immed == null)
-                    return null;
+                string reg1 = Getregindex(inst.m_tokens[1].m_value);
+                string reg2 = Getregindex(inst.m_tokens[2].m_value);
+                string immed = GetImmed(inst.m_tokens[3].m_value);
                 string rd = reg1;
                 string rs1 = reg2;
                 mc = opcode + rs1 + rd + immed;
@@ -296,55 +342,53 @@ namespace Assembler
 
             return mc;
         }
-        string? Getjtypeinst(Instruction inst)
+        string Getjtypeinst(Instruction inst)
         {
-            if (inst.m_tokens.Count != 2 || !labels.TryGetValue(inst.m_tokens[1].m_value, out int lbl))
-                return null;
+            if (inst.m_tokens.Count != 2 || !labels.ContainsKey(inst.m_tokens[1].m_value))
+            {
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid J-Type instruction\n", 1);
+                return "";
+            }
+            int lbl = labels[inst.m_tokens[1].m_value];
             string immed = Convert.ToString(lbl, 2);
             immed = immed.PadLeft(26, '0');
             string mc = opcodes[inst.m_tokens[0].m_value] + immed;
             return mc;
         }
-        List<string>? GetMachineCodeOfProg(ref Program program)
+        List<string> GetMachineCodeOfProg(ref Program program)
         {
             List<string> mcs = [];
             curr_inst_index = 0;
             for (int i = 0; i < program.instructions.Count; i++)
             {
-                InstructionType? type = GetInstType(program.instructions[i].m_tokens[0].m_value);
-                if (type.HasValue)
-                {
-                    Instruction temp = program.instructions[i];
-                    temp.m_type = type.Value;
-                    program.instructions[i] = temp;
-                    string? mc = GetMcOfInst(program.instructions[i]);
-                    if (mc == null)
-                    {
-                        return null;
-                    }
-                    mcs.Add(mc);
-                    curr_inst_index++;
-                }
-                else
-                {
-                    return null;
-                }
+                InstructionType type = GetInstType(program.instructions[i].m_tokens[0].m_value);
+                Instruction temp = program.instructions[i];
+                temp.m_type = type;
+                program.instructions[i] = temp;
+                string mc = GetMcOfInst(program.instructions[i]);
+                mcs.Add(mc);
+                curr_inst_index++;
             }
 
             return mcs;
         }
-        string? GetMcOfInst(Instruction inst)
+        string GetMcOfInst(Instruction inst)
         {
             if (inst.m_tokens.Count > 0 && (inst.m_tokens[0].m_value == "hlt" || inst.m_tokens[0].m_value == "nop"))
                 return opcodes[inst.m_tokens[0].m_value].PadRight(32, '0');
             // here we construct the binaries of a given instruction
-            return inst.m_type switch
+            switch (inst.m_type)
             {
-                InstructionType.rtype => Getrtypeinst(inst),
-                InstructionType.itype => Getitypeinst(inst),
-                InstructionType.jtype => Getjtypeinst(inst),
-                _ => null,
-            };
+                case InstructionType.rtype:
+                    return Getrtypeinst(inst);
+                case InstructionType.itype:
+                    return Getitypeinst(inst);
+                case InstructionType.jtype:
+                    return Getjtypeinst(inst);
+                default:
+                    Shartilities.UNREACHABLE($"GetMcOfInst");
+                    return "";
+            }
         }
         public bool Isbranch(string mnem)
         {
@@ -372,12 +416,16 @@ namespace Assembler
                     branch = "beq";
                 }
                 return [
-                    new Instruction([new Token("slt"), new Token("$at"), new Token($"{inst.m_tokens[1].m_value}"), new Token("$0") ]),
-                    new Instruction([new Token(branch), new Token("$at"), new Token("$0"), new Token($"{inst.m_tokens[2].m_value}") ]),
+                    new([new("slt"), new("$at"), new($"{inst.m_tokens[1].m_value}"), new("$0") ]),
+                    new([new(branch), new("$at"), new("$0"), new($"{inst.m_tokens[2].m_value}") ]),
                 ];
             }
+            else
+            {
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid pseudo instruction `{inst.m_tokens[0].m_value}`\n", 1);
+            }
             lblINVINST = true;
-            //Assert($"Invalid Pseudo Instruction : {inst.m_tokens[0].m_value}");
+
             return [];
         }
         void SubstitutePseudoInProg(ref Program program)
@@ -480,28 +528,32 @@ namespace Assembler
             program.instructions.RemoveAll(inst => inst.m_tokens.Count == 0);
         }
         
-        Instruction? TokenizeInst()
+        Instruction TokenizeInst()
         {
-            StringBuilder buffer = new StringBuilder();
-            Instruction instruction = new Instruction();
+            StringBuilder buffer = new();
+            Instruction instruction = new();
             while (peek().HasValue)
             {
-                char c = peek().Value;
+                char? t = peek();
+                char c;
+                if (t.HasValue)
+                    c = t.Value;
+                else break;
 
                 if (char.IsWhiteSpace(c) || c == ',')
                 {
+                    consume();
                     if (buffer.Length > 0)
                     {
-                        instruction.m_tokens.Add(new Token(buffer.ToString()));
+                        instruction.m_tokens.Add(new(buffer.ToString()));
                         buffer.Clear();
                     }
-                    consume();
                 }
                 else if (IsComment())
                 {
                     if (buffer.Length > 0)
                     {
-                        instruction.m_tokens.Add(new Token(buffer.ToString()));
+                        instruction.m_tokens.Add(new(buffer.ToString()));
                         buffer.Clear();
                     }
                     break;
@@ -511,36 +563,36 @@ namespace Assembler
                     consume();
                     string a = buffer.ToString();
                     buffer.Clear();
-                    while(peek().HasValue && !peek('(').HasValue)
+                    while (peek().HasValue && !peek('(').HasValue)
                     {
                         buffer.Append(consume());
                     }
                     string b = buffer.ToString();
                     buffer.Clear();
                     string sum = (Convert.ToInt32(a) + Convert.ToInt32(b)).ToString();
-                    instruction.m_tokens.Add(new Token(sum));
+                    instruction.m_tokens.Add(new(sum));
                 }
                 else if (c == '(' || c == ')')
                 {
                     if (buffer.Length != 0)
                     {
-                        instruction.m_tokens.Add(new Token(buffer.ToString()));
+                        instruction.m_tokens.Add(new(buffer.ToString()));
                         buffer.Clear();
                     }
                     buffer.Append(char.ToLower(c));
-                    instruction.m_tokens.Add(new Token(buffer.ToString()));
+                    instruction.m_tokens.Add(new(buffer.ToString()));
                     consume();
                     buffer.Clear();
                 }
                 else if (c == ':')
                 {
+                    consume();
                     buffer.Append(char.ToLower(c));
                     if (buffer.Length > 0)
                     {
-                        instruction.m_tokens.Add(new Token(buffer.ToString()));
+                        instruction.m_tokens.Add(new(buffer.ToString()));
                         buffer.Clear();
                     }
-                    consume();
 
                 }
                 else
@@ -551,32 +603,25 @@ namespace Assembler
             }
             if (buffer.Length > 0)
             {
-                instruction.m_tokens.Add(new Token(buffer.ToString()));
+                instruction.m_tokens.Add(new(buffer.ToString()));
                 buffer.Clear();
             }
             m_curr_index = 0;
             return instruction;
         }
-        Program? TokenizeProg(List<string> thecode)
+        Program TokenizeProg(List<string> thecode)
         {
-            Program program = new Program();
+            Program program = new();
             for (int i = 0; i < thecode.Count; i++)
             {
                 m_curr_inst = thecode[i];
-                Instruction? instruction = TokenizeInst();
-                if (instruction.HasValue)
-                {
-                    program.instructions.Add(instruction.Value);
-                }
-                else
-                {
-                    return null;
-                }
+                Instruction instruction = TokenizeInst();
+                program.instructions.Add(instruction);
             }
 
             return program;
         }
-        public Program? ASSEMBLE(List<string> in_prog)
+        public Program? AssemblyProgram(List<string> in_prog)
         {
             lblINVINST = false;
             lblinvlabel = false;
@@ -584,31 +629,14 @@ namespace Assembler
             labels.Clear();
 
             in_prog.RemoveAll(line => string.IsNullOrEmpty(line) || string.IsNullOrWhiteSpace(line));
-            m_prog = in_prog;
+            m_prog = [.. in_prog];
             m_prog.Add("HLT");
-            Program? prog = TokenizeProg(m_prog);
-
-            if (prog.HasValue)
-            {
-                Program program = prog.Value;
-                SubstitutePseudoInProg(ref program);
-                Subtitute_labels(ref program);
-                List<string>? mc = GetMachineCodeOfProg(ref program);
-                if (mc != null)
-                {
-                    program.mc = mc;
-                }
-                else
-                {
-                    lblINVINST = true;
-                    return null;
-                }
-                return program;
-            }
-            else
-            {
-                return null;
-            }
+            Program program = TokenizeProg(m_prog);
+            SubstitutePseudoInProg(ref program);
+            Subtitute_labels(ref program);
+            List<string> mc = GetMachineCodeOfProg(ref program);
+            program.mc = mc;
+            return program;
         }
 
         public List<string> GetInstsAsText(Program program)
@@ -621,7 +649,7 @@ namespace Assembler
                 if (mnem == "beq" || mnem == "bne")
                 {
                     string LabelValue = Convert.ToInt16(program.mc[i].Substring(16), 2).ToString();
-                    instruction.m_tokens[^1] = new Token(LabelValue);
+                    instruction.m_tokens[^1] = new(LabelValue);
                 }
                 string inst = "";
                 instruction.m_tokens.ForEach(token => inst += token.m_value + " ");

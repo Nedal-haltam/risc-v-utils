@@ -5,13 +5,6 @@ namespace LibUtils
 {
     public static class LibUtils
     {
-        public static void assert(string msg)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Error.WriteLine(msg);
-            Console.ResetColor();
-            Environment.Exit(1);
-        }
         public static void clean_comments(ref List<string> code)
         {
             for (int i = 0; i < code.Count; i++)
@@ -117,24 +110,43 @@ namespace LibUtils
         public static (List<string> , List<string>) Get_directives(List<string> src)
         {
             for (int i = 0; i < src.Count; i++)
-            {
                 src[i] = src[i].Trim();
-            }
+            src.RemoveAll(x => string.IsNullOrEmpty(x) || string.IsNullOrWhiteSpace(x));
 
-            int data_index = src.IndexOf(".data");
-            int text_index = src.IndexOf(".text");
+            int data_index = src.IndexOf(".section .data");
+            int text_index = src.IndexOf(".section .text");
 
             List<string> curr_data_dir = [];
             List<string> curr_text_dir = [];
 
-            if (data_index != -1 && text_index != -1)
+            if (text_index == -1)
+                Shartilities.Log(Shartilities.LogType.ERROR, $"text directive doesn't exist\n", 1);
+
+            if (data_index != -1)
             {
-                curr_data_dir = src.GetRange(data_index, text_index - data_index);
+                int count = (int)MathF.Abs(text_index - data_index);
+                if (data_index > text_index)
+                {
+                    curr_data_dir = src.GetRange(data_index, src.Count - count);
+                    curr_text_dir = src.GetRange(text_index, count);
+                }
+                else
+                {
+                    curr_data_dir = src.GetRange(data_index, count);
+                    curr_text_dir = src.GetRange(text_index, src.Count - count);
+                }
             }
-            if (text_index != -1)
-            {
-                curr_text_dir = src.GetRange(text_index + 1, src.Count - text_index - 1);
-            }
+            else
+                curr_text_dir = src;
+
+            if (curr_data_dir.Count > 1)
+                curr_data_dir.RemoveAt(0);
+            curr_text_dir.RemoveAt(0);
+
+            if (curr_text_dir.Count > 0  && curr_text_dir[0] == ".globl main")
+                curr_text_dir.RemoveAt(0);
+            else
+                Shartilities.Log(Shartilities.LogType.ERROR, $"main is not defined in the assembly program\n", 1);
             return (curr_data_dir, curr_text_dir);
         }
         public static string GetMIFentry(string addr, string value)
