@@ -72,7 +72,7 @@ namespace LibCPU {
         public static int HANDLER_ADDR = 1000;
         public static int IM_SIZE;
         public static int DM_SIZE;
-
+        public static int RETURN_ADDRESS_REGISTER = 1;
 
         public const string EXCEPTION = "EXCEPTION";
         public const string FETCH = "FETCH";
@@ -172,10 +172,6 @@ namespace LibCPU {
             string nop = "0".PadLeft(32, '0');
             for (int i = 0; i < IM_SIZE - curr_count; i++) IM.Add(nop);
 
-            //IM[HANDLER_ADDR - 1] = "11111100000000000000000000000000"; // hlt
-            //IM[HANDLER_ADDR] = "00100000000111111111111111111111"; // addi $31 $0 -1
-            //IM[HANDLER_ADDR + 1] = "11111100000000000000000000000000"; // hlt
-
             List<string> DM = [.. data_mem_init];
 
             for (int i = 0; i < DM_SIZE - data_mem_init.Count; i++) DM.Add("0");
@@ -236,7 +232,7 @@ namespace LibCPU {
 
             // J-format depends on opcode field
             { "000010000000" , Mnemonic.j    }, // PC = zx(addr) << 2  , note.1
-            { "000011000000" , Mnemonic.jal  }, // R[31] = PC+1, PC = zx(addr) << 2  , note.1
+            { "000011000000" , Mnemonic.jal  }, // R[1] = PC+1, PC = zx(addr) << 2  , note.1
 
 
             { "111111000000" , Mnemonic.hlt  },
@@ -707,7 +703,7 @@ namespace LibCPU {
             }
             if (inst.format == "J")
             {
-                inst.rdind = 31;
+                inst.rdind = RETURN_ADDRESS_REGISTER;
             }
             return inst;
         }
@@ -946,7 +942,7 @@ namespace LibCPU {
                 currROBregister.writeData = currInstruction.address;
                 currROBregister.ready       = true;
                 tempROBen = ROB.enqueue(currROBregister);
-                if(currInstruction.mnem == Mnemonic.jal) regs_ROBENS[31] = ROB.end;
+                if(currInstruction.mnem == Mnemonic.jal) regs_ROBENS[RETURN_ADDRESS_REGISTER] = ROB.end;
                 return tempROBen;
             }
             
@@ -1171,8 +1167,8 @@ namespace LibCPU {
                 }
                 else if(currROBregister.type == Mnemonic.j || currROBregister.type == Mnemonic.jal || currROBregister.type == Mnemonic.jr) {
                     if(currROBregister.type == Mnemonic.jal) {
-                        regs_ROBENS[31] = 0;
-                        regs[31] = currROBregister.PC + 1;
+                        regs_ROBENS[RETURN_ADDRESS_REGISTER] = 0;
+                        regs[RETURN_ADDRESS_REGISTER] = currROBregister.PC + 1;
                     }
                     ROB.dequeue();
                     return (currROBregister.type, false, false, commitBTA);
@@ -1487,7 +1483,7 @@ namespace LibCPU {
             }
             if (inst.format == "J")
             {
-                inst.rdind = 31;
+                inst.rdind = RETURN_ADDRESS_REGISTER;
             }
             return inst;
         }
@@ -1995,7 +1991,7 @@ namespace LibCPU {
             }
             if (inst.format == "J")
             {
-                inst.rdind = 31;
+                inst.rdind = RETURN_ADDRESS_REGISTER;
             }
             return inst;
         }
