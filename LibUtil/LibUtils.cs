@@ -20,6 +20,25 @@ namespace LibUtils
 
             }
         }
+        public static List<string> GetInstsAsText(Assembler.Program program)
+        {
+            List<string> ret = [];
+            for (int i = 0; i < program.instructions.Count; i++)
+            {
+                Assembler.Instruction instruction = program.instructions[i];
+                string mnem = instruction.m_tokens[0].m_value;
+                if (mnem == "beq" || mnem == "bne")
+                {
+                    string LabelValue = Convert.ToInt16(program.mc[i].Substring(16), 2).ToString();
+                    instruction.m_tokens[^1] = new(LabelValue);
+                }
+                string inst = "";
+                instruction.m_tokens.ForEach(token => inst += token.m_value + " ");
+                ret.Add(inst);
+            }
+            return ret;
+        }
+
         public static (List<string>, List<string>, List<KeyValuePair<string, int>>) assemble_data_dir(List<string> data_dir)
         {
             List<string> data = [];
@@ -170,10 +189,13 @@ namespace LibUtils
 
             for (int i = 0; i < list.Count; i++)
             {
-                string address = (start_address + i).ToString("X");
-                string value = Convert.ToInt32(list[i], from_base).ToString("X").PadLeft(width / 4, '0');
-                string entry = GetMIFentry(address, value);
-                sb.Append(entry + '\n');
+                if (list[i].Length > 0)
+                {
+                    string address = (start_address + i).ToString("X");
+                    string value = Convert.ToInt32(list[i], from_base).ToString("X").PadLeft(width / 4, '0');
+                    string entry = GetMIFentry(address, value);
+                    sb.Append(entry + '\n');
+                }
             }
 
             return sb;
@@ -211,7 +233,8 @@ namespace LibUtils
             List<string> IM_INIT = [];
             for (int i = 0; i < mc.Count; i++)
             {
-                IM_INIT.Add(get_entry_IM_INIT(mc[i], curr_insts[i], i));
+                if (mc[i].Length > 0)
+                    IM_INIT.Add(get_entry_IM_INIT(mc[i], curr_insts[i], i));
             }
             return IM_INIT;
         }

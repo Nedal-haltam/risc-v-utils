@@ -1,15 +1,6 @@
 
 using System.Text;
-using System.Collections.Generic;
-
 using static LibCPU.RISCV;
-using System.Runtime.InteropServices;
-//using System.IO.Pipelines;
-using System.Formats.Asn1;
-using System.Security;
-using System.Data;
-using System.Transactions;
-using System.Numerics;
 namespace LibCPU {
     // circular queue used for ROB and LSbuffer in OOO CPU
     public class CircularQueue<T> {
@@ -237,12 +228,6 @@ namespace LibCPU {
 
             { "111111000000" , Mnemonic.hlt  },
         };
-        // note.1 : apparently the shift left by 2 is optional because because the IM may be word addressable rather than byte addressable.
-        // in other words if the IM was byte addressable each location holds one of four bytes of an instruction and when we do a branch for example the offset by it self
-        // represents how many instruction is the target address away from it so we shift left by 2 (multiply by four) so we can account for each byte in the IM (given that each
-        // instrution is four bytes and it is the case here)...
-        // BUT if the IM is word addressable and the size of the word depends on the architecture in our case it's 32-bit (four bytes), we won't need to shift because each
-        // location is alread four bytes and holding a whole instruction
         public static Aluop get_inst_aluop(Mnemonic mnem)
         {
         return mnem switch
