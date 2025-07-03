@@ -61,8 +61,8 @@ namespace LibCPU {
 
         public static int MAX_CLOCKS = 100 * 1000 * 1000;
         public static int HANDLER_ADDR = 1000;
-        public static int IM_SIZE;
-        public static int DM_SIZE;
+        public static uint IM_SIZE;
+        public static uint DM_SIZE;
         public static int RETURN_ADDRESS_REGISTER = 1;
 
         public const string EXCEPTION = "EXCEPTION";
