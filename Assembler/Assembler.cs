@@ -1,5 +1,7 @@
 ﻿
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Assembler
@@ -45,7 +47,6 @@ namespace Assembler
         List<string> m_prog = [];
         string m_curr_inst = "";
         int m_curr_index = 0;
-        int curr_inst_index;
         readonly Dictionary<string, int> REG_LIST = new()
         {
             {"zero", 0},
@@ -82,107 +83,139 @@ namespace Assembler
             {"t5"  , 30},
             {"t6"  , 31},
         };
+        public struct InstInfo(string Opcode, string Funct3, string Funct7)
+        {
+            public string Opcode = Opcode;
+            public string Funct3 = Funct3;
+            public string Funct7 = Funct7;
+        }
+        public static class INSTRUCTIONS
+        {
+            public static Dictionary<string, InstInfo> Infos = new()
+            {
+                {"lui"   , new("0110111", "", "")},
+                {"auipc" , new("0010111", "", "")},
+                {"auipc" , new("0010011", "000", "")},
+                {"auipc" , new("0010011", "010", "")},
+            };
+            public static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
+            {
+                InstInfo info = Infos[mnem];
+                return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
+            }
+            public static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
+            {
+                InstInfo info = Infos[mnem];
+                return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
+            }
+            public static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
+            {
+                InstInfo info = Infos[mnem];
+                return imm12.Substring(0, 7) + rs2 + rs1 + info.Funct3 + imm12.Substring(7, 5) + info.Opcode;
+            }
+            public static string GetUtypeInst(string mnem, string imm20, string rd) => imm20 + rd + Infos[mnem].Opcode;
+        }
         string Getregindex(string reg)
         {
             if (reg.StartsWith('$') || reg.StartsWith('x'))
-            {
                 reg = reg[1..];
-                if (REG_LIST.TryGetValue(reg, out int index))
-                {
-                    return Convert.ToString(index, 2).PadLeft(5, '0');
-                }
-                else if (byte.TryParse(reg, out byte usb) && usb >= 0 && usb <= 31)
-                {
-                    return Convert.ToString(usb, 2).PadLeft(5, '0');
-                }
-                else
-                {
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register value `{reg}`\n", 1);
-                    return "";
-                }
+
+            if (REG_LIST.TryGetValue(reg, out int index))
+            {
+                return Convert.ToString(index, 2).PadLeft(5, '0');
+            }
+            else if (byte.TryParse(reg, out byte usb) && usb >= 0 && usb <= 31)
+            {
+                return Convert.ToString(usb, 2).PadLeft(5, '0');
             }
             else
             {
-                if (!REG_LIST.ContainsKey(reg))
-                {
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register name : `{reg}`\n", 1);
-                }
-                return Convert.ToString(REG_LIST[reg], 2).PadLeft(5, '0');
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register `{reg}`\n", 1);
+                return "";
             }
         }
-        string GetImmed(string immed)
+        void Check(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction");
+        List <string> GetMcOfInst(Instruction inst)
         {
-            // andi, ori, xori (they do zero extend)
-            if ((immed.StartsWith("0x") || immed.StartsWith("0X")))
-            {
-                try
-                {
-                    short temp = Convert.ToInt16(immed, 16);
-                    return Convert.ToString(temp, 2).PadLeft(16, '0');
-                }
-                catch
-                {
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"unable to convert to 16-bit signed immediate : `{immed}`\n", 1);
-                    return "";
-                }
-            }
-            else if (ushort.TryParse(immed, out ushort usb))
-            {
-                immed = Convert.ToString(usb, 2);
-                return immed.PadLeft(16, '0');
-            }
-            else if (short.TryParse(immed, out short sb))
-            {
-                immed = Convert.ToString(sb, 2);
-                return immed.PadLeft(16, immed[0]);
-            }
-            else
-                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate : `{immed}`\n", 1);
-            return "";
-        }
-        string GetMcOfInst(Instruction inst)
-        {
-            // we are going to support up to 3.8, not all of them but upto 3.8
-            // document each instruction it's format and any neccessary/useful/important information
-            // 
+            // references:
+            // - https://msyksphinz-self.github.io/riscv-isadoc/
+            // - https://riscv.github.io/riscv-isa-manual/snapshot/unprivileged/
             Shartilities.TODO($"assemble here, my friend");
-            List<Token> tokens = inst.m_tokens;
-            string mnem = tokens[0].m_value;
+            List<Token> ts = inst.m_tokens;
+            string mnem = ts[0].m_value;
+            // TODO: support negative numbers
             switch (mnem)
             {
+                case "lui": 
+                    {
+                        // lui rd,imm
+                        // x[rd] = sext(immediate[31:12] << 12)
+                        Check(mnem, ts.Count, 3);
+                        string rd = Getregindex(ts[1].m_value);
+                        string imm = ts[2].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0')[..20];
+                        return [INSTRUCTIONS.GetUtypeInst(mnem, imm, rd)];
+                    }
+                case "auipc": 
+                    {
+                        // auipc rd,imm
+                        // x[rd] = pc + sext(immediate[31:12] << 12)
+                        Check(mnem, ts.Count, 3);
+                        string rd = Getregindex(ts[1].m_value);
+                        string imm = ts[2].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 19, 20);
+                        return [INSTRUCTIONS.GetUtypeInst(mnem, imm, rd)];
+                    }
+                case "addi":
+                    {
+                        // addi rd,rs1,imm
+                        // x[rd] = x[rs1] + sext(immediate)
+                        Check(mnem, ts.Count, 4);
+                        string rd = ts[1].m_value;
+                        string rs1 = ts[2].m_value;
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "mv":
+                    {
+                        // mv rd,rs1
+                        // x[rd] = x[rs1]
+                        Check(mnem, ts.Count, 3);
+                        return GetMcOfInst(new([new("addi"), ts[1], ts[2], new("0")]));
+                    }
+                case "slti":
+                    {
+                        // slti rd,rs1,imm
+                        // x[rd] = x[rs1] <s sext(immediate)
+                        // x[rd] = (signed(x[rs1]) < signed(sext(immediate))) ? 1 : 0
+                        string rd = ts[1].m_value;
+                        string rs1 = ts[2].m_value;
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
                 default:
                     Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic `{mnem}`\n", 1);
-                    return "";
+                    return new();
             }
         }
         List<string> GetMachineCodeOfProg(ref Program program)
         {
             List<string> mcs = [];
-            curr_inst_index = 0;
             for (int i = 0; i < program.instructions.Count; i++)
             {
-                mcs.Add(GetMcOfInst(program.instructions[i]));
-                curr_inst_index++;
+                mcs.AddRange(GetMcOfInst(program.instructions[i]));
             }
             return mcs;
-        }
-        static int LineNumber([System.Runtime.CompilerServices.CallerLineNumber] int LineNumber = 0)
-        {
-            return LineNumber;
-        }
-        static string FilePath([System.Runtime.CompilerServices.CallerFilePath] string FilePath = "")
-        {
-            return FilePath;
-        }
-        bool IsPseudo(string inst)
-        {
-            return inst == "bltz" ||
-                   inst == "bgez" ||
-                   inst == "li" ||
-                   inst == "la" ||
-                   inst == "call" ||
-                   inst == "ret" ||
-                   inst == "mv";
         }
         List<Instruction> GetPseudo(Instruction inst)
         {
@@ -237,19 +270,6 @@ namespace Assembler
             {
                 Shartilities.Log(Shartilities.LogType.ERROR, $"invalid pseudo instruction `{inst.m_tokens[0].m_value}`\n", 1);
                 return [];
-            }
-        }
-        void SubstitutePseudoInProg(ref Program program)
-        {
-            for (int i = 0; i < program.instructions.Count; i++)
-            {
-                if (IsPseudo(program.instructions[i].m_tokens[0].m_value))
-                {
-                    List<Instruction> replace = GetPseudo(program.instructions[i]);
-                    program.instructions.RemoveAt(i);
-                    program.instructions.InsertRange(i, replace);
-                    i = 0;
-                }
             }
         }
         char? peek(int offset = 0)
@@ -366,20 +386,6 @@ namespace Assembler
                     }
                     break;
                 }
-                else if (c == '+')
-                {
-                    consume();
-                    string a = buffer.ToString();
-                    buffer.Clear();
-                    while (peek().HasValue && !peek('(').HasValue)
-                    {
-                        buffer.Append(consume());
-                    }
-                    string b = buffer.ToString();
-                    buffer.Clear();
-                    string sum = (Convert.ToInt32(a) + Convert.ToInt32(b)).ToString();
-                    instruction.m_tokens.Add(new(sum));
-                }
                 else if (c == '(' || c == ')')
                 {
                     if (buffer.Length != 0)
@@ -435,11 +441,18 @@ namespace Assembler
             m_prog = [.. in_prog];
             m_prog.Add("HLT");
             Program program = TokenizeProg(m_prog);
-            SubstitutePseudoInProg(ref program);
             Subtitute_labels(ref program);
             List<string> mc = GetMachineCodeOfProg(ref program);
             program.mc = mc;
             return program;
+        }
+        static int LineNumber([System.Runtime.CompilerServices.CallerLineNumber] int LineNumber = 0)
+        {
+            return LineNumber;
+        }
+        static string FilePath([System.Runtime.CompilerServices.CallerFilePath] string FilePath = "")
+        {
+            return FilePath;
         }
     }
 }
