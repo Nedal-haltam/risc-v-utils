@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection.Metadata.Ecma335;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Assembler
@@ -95,25 +96,36 @@ namespace Assembler
             {
                 {"lui"   , new("0110111", "", "")},
                 {"auipc" , new("0010111", "", "")},
-                {"auipc" , new("0010011", "000", "")},
-                {"auipc" , new("0010011", "010", "")},
+                {"addi" , new("0010011", "000", "")},
+                {"slti" , new("0010011", "010", "")},
             };
             public static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
             {
+                if (!Infos.ContainsKey(mnem))
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
                 return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
             }
             public static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
             {
+                if (!Infos.ContainsKey(mnem))
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
                 return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
             }
             public static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
             {
+                if (!Infos.ContainsKey(mnem))
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
                 return imm12.Substring(0, 7) + rs2 + rs1 + info.Funct3 + imm12.Substring(7, 5) + info.Opcode;
             }
-            public static string GetUtypeInst(string mnem, string imm20, string rd) => imm20 + rd + Infos[mnem].Opcode;
+            public static string GetUtypeInst(string mnem, string imm20, string rd)
+            {
+                if (!Infos.ContainsKey(mnem))
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+                return imm20 + rd + Infos[mnem].Opcode;
+            }
         }
         string Getregindex(string reg)
         {
@@ -188,7 +200,9 @@ namespace Assembler
                         // mv rd,rs1
                         // x[rd] = x[rs1]
                         Check(mnem, ts.Count, 3);
-                        return GetMcOfInst(new([new("addi"), ts[1], ts[2], new("0")]));
+                        string rs1 = ts[2].m_value;
+                        string rd = ts[1].m_value;
+                        return [INSTRUCTIONS.GetItypeInst("addi", "0".PadLeft(12, '0'), rs1, rd)];
                     }
                 case "slti":
                     {
