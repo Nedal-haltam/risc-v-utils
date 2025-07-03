@@ -1,7 +1,9 @@
 
 using System.Text;
 using static LibCPU.RISCV;
-namespace LibCPU {
+namespace LibCPU
+{
+#if false
     // circular queue used for ROB and LSbuffer in OOO CPU
     public class CircularQueue<T> {
         public int start, end, size;
@@ -51,428 +53,6 @@ namespace LibCPU {
         public bool isFull() { return ((end + 1) % 16) == start; }
         public void flush() { start = end = -1; }
     }   
-
-    public enum CPU_type
-    {
-        PipeLined, SingleCycle, OOO
-    }
-    public static class RISCV
-    {
-
-        public static int MAX_CLOCKS = 100 * 1000 * 1000;
-        public static int HANDLER_ADDR = 1000;
-        public static uint IM_SIZE;
-        public static uint DM_SIZE;
-        public static int RETURN_ADDRESS_REGISTER = 1;
-
-        public const string EXCEPTION = "EXCEPTION";
-        public const string FETCH = "FETCH";
-        public const string DECODE = "DECODE";
-        public const string EXECUTE = "EXECUTE";
-        public const string MEMORY = "MEMORY";
-        public const string WRITEBACK = "WRITEBACK";
-        public const string INVALID_OPCODED = "INVALID_OPCODED";
-        public const string BUBBLE = "BUBBLE";
-        public const string WRONG_PRED = "WRONG_PRED";
-        public const string LOAD_USE = "LOAD_USE";
-        public const string JR_INDECODE = "JR_INDECODE";
-        public const string JR_INEX1 = "JR_INEX1";
-        public enum Mnemonic
-        {
-            add, addu, subu, sub, and, or, nor, slt, seq, sne, sgt, xor,
-            addi, andi, ori, xori, slti, sll, srl, mult,
-            beq, bne,
-            j, jr, jal, 
-            lw, sw,
-            nop, hlt
-        }
-        public enum Aluop
-        {
-            add, sub, and, or, xor, nor, sll, srl, slt, seq, sne, sgt, div, mult
-        }
-        public struct Instruction
-        {
-            public Instruction Init()
-            {
-                mc = "";
-                mc = mc.PadLeft(32, '0');
-                opcode = "000000";
-                shamt = "00000";
-                format = "R";
-                funct = "000000";
-                mnem = Mnemonic.nop;
-                aluop = 0;
-                rsind = 0;
-                rtind = 0;
-                rdind = 0;
-                address = 0;
-                immeds = 0;
-                immedz = 0;
-                PC = 0;
-                rs = 0;
-                rt = 0;
-                oper1 = 0;
-                oper2 = 0;
-                aluout = 0;
-                memout = 0;
-                prediction = false;
-                valid = true;
-                return this;
-            }
-            public string mc;
-            public string opcode;
-            public int rsind;
-            public int rtind;
-            public int rdind;
-            public string shamt;
-            public string funct;
-            public int address;
-            public int immeds;
-            public int immedz;
-
-            public Mnemonic mnem;
-            public int PC;
-            public int rs;
-            public int rt;
-            public int oper1;
-            public int oper2;
-            public Aluop aluop;
-            public string format;
-            public int aluout;
-            public int memout;
-            public bool prediction;
-            public bool valid;
-        }
-            
-        public static Instruction GetNewInst()
-        {
-            return new Instruction().Init();
-        }
-
-        public static (List<string>, List<string>, List<int>) InitMipsCPU(List<string> insts, List<string> data_mem_init)
-        {
-            List<int> regs = new List<int>();
-            for (int i = 0; i < 32; i++) regs.Add(0);
-            List<string> IM = new List<string>();
-            int curr_count = 0;
-            if (insts != null)
-            {
-                IM.AddRange(insts);
-                curr_count = insts.Count;
-            }
-            string nop = "0".PadLeft(32, '0');
-            for (int i = 0; i < IM_SIZE - curr_count; i++) IM.Add(nop);
-
-            List<string> DM = [.. data_mem_init];
-
-            for (int i = 0; i < DM_SIZE - data_mem_init.Count; i++) DM.Add("0");
-
-            return (IM, DM, regs);
-        }
-
-        public struct CPU
-        {
-            public List<string> DM;
-            public List<int> regs;
-
-            public CPU Init()
-            {
-                DM = new List<string>();
-                regs = new List<int>();
-                return this;
-            }
-
-        }
-
-        public enum Stage { fetch, decode, execute1, execute2, memory, write_back }
-        public enum Exceptions { NONE, INF_LOOP, INVALID_INST, EXCEPTION }
-
-        public static readonly Dictionary<string, Mnemonic> mnemonicmap = new Dictionary<string, Mnemonic>() {
-            // the nop is not mentioned here to not conflict with sll
-            // R-format depends on the funct field, if opcode = "000000" then it is R-format else (it is an I-format or J-format either way it depends on distinct opcodes)
-            // rd = rd, rs1 = rs, rs2 = rt
-            { "000000100000" , Mnemonic.add  }, // R[rd] = R[rs] op R[rt]
-            { "000000101000" , Mnemonic.mult  }, // R[rd] = R[rs] op R[rt]
-            { "000000100001" , Mnemonic.addu }, // R[rd] = R[rs] op R[rt]
-            { "000000100010" , Mnemonic.sub  }, // R[rd] = R[rs] op R[rt]
-            { "000000100011" , Mnemonic.subu }, // R[rd] = R[rs] op R[rt]
-            { "000000100100" , Mnemonic.and  }, // R[rd] = R[rs] op R[rt]
-            { "000000100101" , Mnemonic.or   }, // R[rd] = R[rs] op R[rt]
-            { "000000100110" , Mnemonic.xor  }, // R[rd] = R[rs] op R[rt]
-            { "000000100111" , Mnemonic.nor  }, // R[rd] = R[rs] op R[rt]
-            { "000000101010" , Mnemonic.slt  }, // R[rd] = R[rs] op R[rt]
-            { "000000101100" , Mnemonic.seq  }, // R[rd] = R[rs] op R[rt]
-            { "000000101101" , Mnemonic.sne  }, // R[rd] = R[rs] op R[rt]
-            { "000000101011" , Mnemonic.sgt  }, // R[rd] = R[rs] op R[rt]
-            { "000000000000" , Mnemonic.sll  }, // R[rd] = R[rt] op shamt
-            { "000000000010" , Mnemonic.srl  }, // R[rd] = R[rt] op shamt
-            { "000000001000" , Mnemonic.jr   }, // PC = R[rs] (here we jump to the instruciont in the IM addressed by R[rs])
-
-            // I-format depends on the opcode field
-            // rd = rt, rs1 = rs, rs2 = rt, immed = immed or addr
-            { "001000000000" , Mnemonic.addi }, // R[rt] = R[rs] op sx(immed)  
-            { "001100000000" , Mnemonic.andi }, // R[rt] = R[rs] op zx(immed)  
-            { "001101000000" , Mnemonic.ori  }, // R[rt] = R[rs] op zx(immed)  
-            { "001110000000" , Mnemonic.xori }, // R[rt] = R[rs] op zx(immed)  
-            { "101010000000" , Mnemonic.slti }, // R[rt] = R[rs] op sx(immed)  
-            { "100011000000" , Mnemonic.lw   }, // R[rt] = Mem[R[rs]+sx(immed)]
-            { "101011000000" , Mnemonic.sw   }, // Mem[R[rs]+sx(immed)]=R[rt]  
-            // rs1 = rs, rs2 = rt
-            { "000100000000" , Mnemonic.beq  }, // if (R[rs] op R[rt]) -> PC += sx(offset) << 2  , note.1
-            { "000101000000" , Mnemonic.bne  }, // if (R[rs] op R[rt]) -> PC += sx(offset) << 2  , note.1
-
-            // J-format depends on opcode field
-            { "000010000000" , Mnemonic.j    }, // PC = zx(addr) << 2  , note.1
-            { "000011000000" , Mnemonic.jal  }, // R[1] = PC+1, PC = zx(addr) << 2  , note.1
-
-
-            { "111111000000" , Mnemonic.hlt  },
-        };
-        public static Aluop get_inst_aluop(Mnemonic mnem)
-        {
-        return mnem switch
-        {
-            Mnemonic.add => Aluop.add,
-            Mnemonic.mult => Aluop.mult,
-            Mnemonic.sub => Aluop.sub,
-            Mnemonic.and => Aluop.and,
-            Mnemonic.andi => Aluop.and,
-            Mnemonic.or => Aluop.or,
-            Mnemonic.ori => Aluop.or,
-            Mnemonic.xor => Aluop.xor,
-            Mnemonic.xori => Aluop.xor,
-            Mnemonic.nor => Aluop.nor,
-            Mnemonic.slt => Aluop.slt,
-            Mnemonic.seq => Aluop.seq,
-            Mnemonic.sne => Aluop.sne,
-            Mnemonic.slti => Aluop.slt,
-            Mnemonic.sgt => Aluop.sgt,
-            Mnemonic.sll => Aluop.sll,
-            Mnemonic.srl => Aluop.srl,
-            Mnemonic.addi => Aluop.add,
-            Mnemonic.addu => Aluop.add,
-            Mnemonic.subu => Aluop.sub,
-            Mnemonic.beq => Aluop.sub,
-            Mnemonic.bne => Aluop.sub,
-            Mnemonic.j => Aluop.add,
-            Mnemonic.jr => Aluop.add,
-            Mnemonic.jal => Aluop.add,
-            Mnemonic.lw => Aluop.add,
-            Mnemonic.sw => Aluop.add,
-            _ => 0,
-        };
-        ;
-        }
-        public static string get_format(Mnemonic mnem)
-        {
-        return mnem switch
-        {
-            Mnemonic.add => "R",
-            Mnemonic.mult => "R",
-            Mnemonic.sub => "R",
-            Mnemonic.and => "R",
-            Mnemonic.andi => "I",
-            Mnemonic.or => "R",
-            Mnemonic.ori => "I",
-            Mnemonic.xor => "R",
-            Mnemonic.xori => "I",
-            Mnemonic.nor => "R",
-            Mnemonic.slt => "R",
-            Mnemonic.seq => "R",
-            Mnemonic.sne => "R",
-            Mnemonic.sgt => "R",
-            Mnemonic.slti => "I",
-            Mnemonic.sll => "R",
-            Mnemonic.srl => "R",
-            Mnemonic.addi => "I",
-            Mnemonic.addu => "R",
-            Mnemonic.subu => "R",
-            Mnemonic.beq => "I",
-            Mnemonic.bne => "I",
-            Mnemonic.j => "J",
-            Mnemonic.jr => "R",
-            Mnemonic.jal => "J",
-            Mnemonic.lw => "I",
-            Mnemonic.sw => "I",
-            Mnemonic.hlt => "I",
-            _ => "",
-        };
-        ;
-        }
-        public static int execute_inst(Instruction inst)
-        {
-            switch (inst.aluop)
-            {
-                case Aluop.add: return inst.oper1 + inst.oper2;
-                case Aluop.mult: return inst.oper1 * inst.oper2;
-                case Aluop.sub: return inst.oper1 - inst.oper2;
-                case Aluop.and: return inst.oper1 & inst.oper2;
-                case Aluop.or: return inst.oper1 | inst.oper2;
-                case Aluop.xor: return inst.oper1 ^ inst.oper2;
-                case Aluop.nor: return ~(inst.oper1 | inst.oper2);
-                case Aluop.slt: return (inst.oper1 < inst.oper2) ? 1 : 0;
-                case Aluop.seq: return (inst.oper1 == inst.oper2) ? 1 : 0;
-                case Aluop.sne: return (inst.oper1 != inst.oper2) ? 1 : 0;
-                case Aluop.sgt: return (inst.oper1 > inst.oper2) ? 1 : 0;
-                case Aluop.sll: return inst.oper1 << inst.oper2;
-                case Aluop.srl:
-                    {
-                        if (inst.oper2 == 0)
-                            return inst.oper1;
-                        return (inst.oper1 >>> inst.oper2);
-                    };
-                default: return 0;
-            };
-        }
-        public static bool iswb(Mnemonic mnem)
-        {
-        return mnem switch
-        {
-            Mnemonic.add => true,
-            Mnemonic.mult => true,
-            Mnemonic.sub => true,
-            Mnemonic.and => true,
-            Mnemonic.andi => true,
-            Mnemonic.or => true,
-            Mnemonic.ori => true,
-            Mnemonic.xor => true,
-            Mnemonic.xori => true,
-            Mnemonic.nor => true,
-            Mnemonic.slt => true,
-            Mnemonic.seq => true,
-            Mnemonic.sne => true,
-            Mnemonic.sgt => true,
-            Mnemonic.slti => true,
-            Mnemonic.sll => true,
-            Mnemonic.srl => true,
-            Mnemonic.addi => true,
-            Mnemonic.addu => true,
-            Mnemonic.subu => true,
-            Mnemonic.beq => false,
-            Mnemonic.bne => false,
-            Mnemonic.j => false,
-            Mnemonic.jr => false,
-            Mnemonic.jal => true,
-            Mnemonic.lw => true,
-            Mnemonic.sw => false,
-            _ => false,
-        };
-        ;
-        }
-        public static bool isbranch_taken(Instruction inst)
-        {
-            return (inst.mnem == Mnemonic.beq && inst.oper1 == inst.oper2) ||
-                    (inst.mnem == Mnemonic.bne && inst.oper1 != inst.oper2);
-        }
-        public static bool isbranch(Mnemonic mnem)
-        {
-            return mnem == Mnemonic.beq ||
-                    mnem == Mnemonic.bne;
-        }
-        public static int get_oper1(Instruction inst) {
-            if (inst.format == "R")
-            {
-                if (inst.mnem == Mnemonic.sll || inst.mnem == Mnemonic.srl)
-                    return inst.rt;
-                return inst.rs;
-            }
-            if (inst.format == "I")
-            {
-                return inst.rs;
-            }
-            if (inst.format == "J")
-                return inst.PC + 1;
-            throw new Exception($"Invalid format provided : {inst.format}");
-        }
-        public static bool islogical(Mnemonic mnem)
-        {
-            return mnem == Mnemonic.andi || mnem == Mnemonic.ori || mnem == Mnemonic.xori;
-        }
-        public static int get_oper2(Instruction inst)
-        {
-            if (inst.format == "R")
-            {
-                if (inst.mnem == Mnemonic.sll || inst.mnem == Mnemonic.srl)
-                    return Convert.ToInt32(zx(inst.shamt), 2);
-                if (inst.mnem == Mnemonic.jr)
-                    return 0;
-                return inst.rt;
-            }
-            if (inst.format == "I")
-            {
-                if (islogical(inst.mnem))
-                    return inst.immedz;
-                else if (isbranch(inst.mnem))
-                    return inst.rt;
-                return inst.immeds;
-            }
-            if (inst.format == "J")
-            {
-                return 0;
-            }
-            throw new Exception($"Invalid format provided : {inst.format}");
-        }
-        public static string sx(string num) { return num.PadLeft(32, num[0]); }
-        public static string zx(string num) { return num.PadLeft(32, '0'); }
-        public static void print_regs(List<int> regs) {
-            Console.Write("Register file content : \n");
-            int i = 0;
-            foreach (int n in regs)
-            {
-                string temp = $"index = {i++,10} , reg_out : signed = {n,10} , unsigned = {(uint)n,10}\n";
-                Console.Write(temp);
-            }
-        }
-        public static void print_DM(List<string> DM) {
-            Console.Write("Data Memory Content : \n");
-            int i = 0;
-            foreach (string mem in DM)
-            {
-                string temp;
-                temp = $"Mem[{i++,4}] = {mem,11}\n";
-
-                Console.Write(temp);
-            }
-        }
-
-        public static StringBuilder get_regs(List<int> regs) {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("Register file content : \n");
-            int i = 0;
-            foreach (int n in regs)
-            {
-                string temp = $"index = {i++,10} , reg_out : signed = {n,11} , unsigned = {(uint)n,10}\n";
-                sb.Append(temp);
-            }
-            return sb;
-        }
-
-        public static StringBuilder get_DM(List<string> DM) {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("Data Memory Content : \n");
-            int i = 0;
-            foreach (string mem in DM)
-            {
-                string temp;
-
-                temp = $"Mem[{i++,4}] = {mem,11}\n";
-
-                sb.Append(temp);
-            }
-            return sb;
-        }
-
-        public static bool isvalid_format(string format) { return format == "R" || format == "I" || format == "J"; }
-        public static bool is_in_range_inc(int x, int lo, int hi) { return lo <= x && x <= hi; }
-        public static bool isvalid_reg_ind(Instruction inst) {
-            return is_in_range_inc(inst.rsind, 0, 32) &&
-                    is_in_range_inc(inst.rtind, 0, 32) &&
-                    is_in_range_inc(inst.rdind, 0, 32);
-        }
-        public static bool isvalid_opcode_funct(Instruction inst) { return mnemonicmap.ContainsKey(inst.opcode + inst.funct); }
-
-    }
-    
     public class OOO {
         static public int PC;
         static public bool hlt;
@@ -536,7 +116,7 @@ namespace LibCPU {
         static public int RSsize;
 
         public class RSregister {
-            
+
             public Aluop ALUop;
             public int ROBEN;
             public int ROBEN1;
@@ -616,9 +196,9 @@ namespace LibCPU {
             LSsize         = 16;
             predictorState = 0;
 
-    
+
             (IM, DM, regs) = InitMipsCPU(insts, data_mem_init);
-            
+
             regs_ROBENS = new List<int>();
             for (int i = 0; i < 32; i++) 
                 regs_ROBENS.Add(0);
@@ -630,7 +210,7 @@ namespace LibCPU {
             reservationStation = new List<RSregister>();
             for (int i = 0; i < RSsize; i++) 
                 reservationStation.Add(new RSregister(Aluop.add));
-            
+
             RSfullFlag = false;
 
             // initializing the LS buffer
@@ -695,7 +275,7 @@ namespace LibCPU {
 
         // dispatch instruction from instruction queue
         public bool dispatch_RS_LS(Instruction currInstruction, bool prediction, int tempROBen) {
-   
+
             if(currInstruction.mnem == Mnemonic.j || currInstruction.mnem == Mnemonic.jal) return true; 
 
             // handles all non-load and non-store instructions
@@ -819,7 +399,7 @@ namespace LibCPU {
                                 reservationStation[i].ROBEN2_val = currInstruction.oper2;
                             }   
                         }
-                        
+
                         break;
                     }
                 }
@@ -829,7 +409,7 @@ namespace LibCPU {
                 && currInstruction.mnem != Mnemonic.jr) 
                     regs_ROBENS[currInstruction.rdind] = tempROBen + 1;
 
-                
+
 
                 return true;
             }
@@ -888,7 +468,7 @@ namespace LibCPU {
                 }
                 // updates the ready bit if necessary
                 currLSregister.ready = currLSregister.ROBEN1 == 0 && currLSregister.ROBEN2 == 0;
-            
+
                 // places the register in the LSbuffer
                 LSbuffer.enqueue(currLSregister);
 
@@ -903,7 +483,7 @@ namespace LibCPU {
         // dispatch instruction from instruction queue
         public int dispatch_ROB(Instruction currInstruction, bool prediction) {
             int tempROBen = 0;
-            
+
             ROBregister currROBregister = new ROBregister(currInstruction.mnem);
             currROBregister.Rd          = currInstruction.rdind;
             currROBregister.busy        = true;
@@ -922,7 +502,7 @@ namespace LibCPU {
                         pcsrc = PCsrc.branchTarget;
                     }
                 } 
-                
+
             if(currInstruction.mnem == Mnemonic.j || currInstruction.mnem == Mnemonic.jal) {
                 currROBregister.writeData = currInstruction.address;
                 currROBregister.ready       = true;
@@ -930,9 +510,9 @@ namespace LibCPU {
                 if(currInstruction.mnem == Mnemonic.jal) regs_ROBENS[RETURN_ADDRESS_REGISTER] = ROB.end;
                 return tempROBen;
             }
-            
+
             tempROBen = ROB.enqueue(currROBregister);
-            
+
             return tempROBen;
         }
 
@@ -1096,7 +676,7 @@ namespace LibCPU {
                 } while (j != (ROB.end + 1) % ROB.size);
                 ROB.flush();
             }
-            
+
             if(!LSbuffer.isEmpty()) {
                 int j = LSbuffer.start;
                 LSregister currLSregister = new LSregister(Mnemonic.add);
@@ -1167,7 +747,7 @@ namespace LibCPU {
                     if(currROBregister.Rd != 0 ) {
                         if(regs_ROBENS[currROBregister.Rd] == (ROB.start + 1 % 16))
                             regs_ROBENS[currROBregister.Rd] = 0;
-                            
+
                         regs[currROBregister.Rd] = currROBregister.writeData;
                     }
                 } 
@@ -1226,7 +806,7 @@ namespace LibCPU {
             if(currInstruction.mnem == Mnemonic.bne || currInstruction.mnem == Mnemonic.beq) 
                 prediction = BranchPredictor(wrongPrediction, Mnemonic.nop);
             BranchPredictor(wrongPrediction, commitOpcode);
-            
+
             update_PC(currInstruction, flushFlag, wrongPrediction, prevCommitBTA); // updates the program counter
 
             if(!flushFlag)  tempROBEN = dispatch_ROB(currInstruction, prediction);
@@ -1307,7 +887,7 @@ namespace LibCPU {
                                                 );
                     prevFlushFlag = flushFlag && (commitOpcode == Mnemonic.bne || commitOpcode == Mnemonic.beq);
                     prevCommitBTA = commitBTA;
-                    
+
                 }
                 catch (Exception e) {
                     if (e.Message == EXCEPTION) {
@@ -1321,7 +901,7 @@ namespace LibCPU {
                     excep = Exceptions.INF_LOOP;
                     return (cycles, excep);
                 }
-                
+
             }
 
             return (cycles, excep);
@@ -1331,15 +911,12 @@ namespace LibCPU {
         public void print_DM() { RISCV.print_DM(DM); }
 
     }
-
-    
     public struct BranchPredictorEntry
     {
         public int PC;
         public string BranchHistory;
         public bool outcome;
     }
-
     public class CPU6STAGE
     {
         int PC;
@@ -1909,203 +1486,168 @@ namespace LibCPU {
             RISCV.print_DM(DM);
         }
     }
-    
-    public class SingleCycle
+#endif
+    public enum CPU_type
     {
-        public int PC;
-        public bool hlt;
-        public List<string> DM; // Data Mem
-        public List<int> regs;
-        public List<string> IM; // Instruction Mem
-
-        public SingleCycle(List<string> insts, List<string> data_mem_init)
+        SingleCycle,
+    }
+    public static class RISCV
+    {
+        //public const string EXCEPTION = "EXCEPTION";
+        //public const string FETCH = "FETCH";
+        //public const string DECODE = "DECODE";
+        //public const string EXECUTE = "EXECUTE";
+        //public const string MEMORY = "MEMORY";
+        //public const string WRITEBACK = "WRITEBACK";
+        //public const string INVALID_OPCODED = "INVALID_OPCODED";
+        //public const string BUBBLE = "BUBBLE";
+        //public const string WRONG_PRED = "WRONG_PRED";
+        //public const string LOAD_USE = "LOAD_USE";
+        //public const string JR_INDECODE = "JR_INDECODE";
+        //public const string JR_INEX1 = "JR_INEX1";
+        public enum Mnemonic
         {
-            (IM, DM, regs) = InitMipsCPU(insts, data_mem_init);
-
-            PC = 0;
-            hlt = false;
+            add, addu, subu, sub, and, or, nor, slt, seq, sne, sgt, xor,
+            addi, andi, ori, xori, slti, sll, srl, mult,
+            beq, bne,
+            j, jr, jal,
+            lw, sw,
+            nop, hlt
         }
-        Instruction decodemc(string mc, int pc)
+        public enum Aluop
         {
-            Instruction inst = GetNewInst();
-            inst.mc = mc;
-            inst.PC = pc;
-            inst.opcode = mc.Substring(mc.Length - (1 + 31), 6);
-            inst.rsind = Convert.ToInt32(mc.Substring(mc.Length - (1 + 25), 5), 2);
-            inst.rtind = Convert.ToInt32(mc.Substring(mc.Length - (1 + 20), 5), 2);
-            inst.rdind = Convert.ToInt32(mc.Substring(mc.Length - (1 + 15), 5), 2);
-            inst.shamt = mc.Substring(mc.Length - (1 + 10), 5);
-            inst.funct = mc.Substring(mc.Length - (1 + 5), 6);
-            inst.immeds = Convert.ToInt32(sx(mc.Substring(mc.Length - (1 + 15), 16)), 2);
-            inst.immedz = Convert.ToInt32(zx(mc.Substring(mc.Length - (1 + 15), 16)), 2);
-            inst.address = Convert.ToInt32(zx(mc.Substring(mc.Length - (1 + 25), 26)), 2);
-            // riscv integer instruction map for formats (R, I, J)
-            inst.rs = regs[inst.rsind];
-            inst.rt = regs[inst.rtind];
-
-
-            if (inst.opcode != "000000")
-                inst.funct = "000000";
-            if (!mnemonicmap.TryGetValue(inst.opcode + inst.funct, out Mnemonic value))
-            {
-                Exception e = new Exception(EXCEPTION)
-                {
-                    Source = DECODE
-                };
-                throw e;
-            }
-            else
-            {
-                if (mc == "".PadLeft(32, '0'))
-                    inst.mnem = Mnemonic.nop;
-                inst.mnem = value;
-            }
-
-            if (inst.mnem == Mnemonic.sw)
-            {
-
-            }
-
-            inst.aluop = get_inst_aluop(inst.mnem);
-            inst.format = get_format(inst.mnem);
-            inst.oper1 = get_oper1(inst);
-            inst.oper2 = get_oper2(inst);
-            if (inst.format == "I")
-            {
-                inst.rdind = inst.rtind;
-            }
-            if (inst.format == "J")
-            {
-                inst.rdind = RETURN_ADDRESS_REGISTER;
-            }
-            return inst;
+            add, sub, and, or, xor, nor, sll, srl, slt, seq, sne, sgt, div, mult
         }
-
-        void mem(ref Instruction inst)
+        public enum Stage { fetch, decode, execute1, execute2, memory, write_back }
+        public static void print_regs(List<int> regs)
         {
-            if (inst.mnem == Mnemonic.lw)
-            {
-                if (!is_in_range_inc(inst.aluout, 0, DM.Count - 1))
-                {
-                    Exception e = new Exception($"Memory address {inst.aluout} is an invalid memory address")
-                    {
-                        Source = "SingleCycle::DataMemory"
-                    };
-                    throw e;
-                }
-                string smemout = DM[inst.aluout];
-                inst.memout = Convert.ToInt32(smemout);
-            }
-            else if (inst.mnem == Mnemonic.sw)
-            {
-                string memin = Convert.ToString(inst.rt);
-                if (!is_in_range_inc(inst.aluout, 0, DM.Count - 1))
-                {
-                    Exception e = new Exception($"Memory address {inst.aluout} is an invalid memory address")
-                    {
-                        Source = "SingleCycle::DataMemory"
-                    };
-                    throw e;
-                }
-                DM[inst.aluout] = memin;
-            }
-        }
-        void write_back(Instruction inst)
-        {
-            if (inst.mnem == Mnemonic.hlt)
-                hlt = true;
-
-            if (iswb(inst.mnem) && inst.rdind != 0)
-            {
-                if (!is_in_range_inc(inst.rdind, 0, 31))
-                {
-                    Exception e = new Exception($"register index {inst.rdind} is an invalid index")
-                    {
-                        Source = "SingleCycle::write_back"
-                    };
-                    throw e;
-                }
-                regs[inst.rdind] = (inst.mnem == Mnemonic.lw) ? inst.memout : inst.aluout;
-                //Console.WriteLine($"writereg = {inst.rdind} , writedata = {regs[inst.rdind]}");
-            }
-
-        }
-        void ConsumeInst()
-        {
-            Instruction inst = new();
-            try
-            {
-                // fetching
-                //Console.WriteLine($"PC = {PC}");
-                string mc = IM[PC];
-                // decoding
-                inst = decodemc(mc, PC);
-                // executing
-                inst.aluout = execute_inst(inst);
-                // mem RISCV
-                mem(ref inst);
-                // writing back
-                write_back(inst);
-            }
-            catch (Exception e)
-            {
-                PC = HANDLER_ADDR;
-
-                Run();
-                throw e;
-            }
-
-            if (hlt)
-                return;
-            // updating the PC
-            if (inst.format == "J")
-            {
-                PC = inst.address;
-            }
-            else if (inst.mnem == Mnemonic.jr)
-            {
-                PC = inst.aluout;
-            }
-            else if (isbranch(inst.mnem) && isbranch_taken(inst))
-            {
-                PC += inst.immeds;
-            }
-            else
-                PC += 1;
-        }
-
-        public (int, Exceptions) Run()
-        {
+            Console.Write("Register file content : \n");
             int i = 0;
-            while (PC < IM.Count)
+            foreach (int n in regs)
             {
-                i++;
-                try
-                {
-                    ConsumeInst();
-                }
-                catch
-                {
-                    //Console.WriteLine($"cycles consumed = {i}");
-                    i--;
-                    return (i, Exceptions.EXCEPTION);
-                }
-                if (hlt)
-                    return (i, Exceptions.NONE);
-                if (i == RISCV.MAX_CLOCKS)
-                {
-                    return (0, Exceptions.INF_LOOP);
-                }
+                string temp = $"index = {i++,10} , reg_out : signed = {n,10} , unsigned = {(uint)n,10}\n";
+                Console.Write(temp);
             }
-            return (i, Exceptions.NONE);
         }
-        public void print_regs()
+        public static void print_DM(List<string> DM)
         {
-            RISCV.print_regs(regs);
+            Console.Write("Data Memory Content : \n");
+            int i = 0;
+            foreach (string mem in DM)
+            {
+                string temp;
+                temp = $"Mem[{i++,4}] = {mem,11}\n";
+
+                Console.Write(temp);
+            }
         }
-        public void print_DM()
+
+        public static StringBuilder get_regs(List<int> regs)
         {
-            RISCV.print_DM(DM);
+            StringBuilder sb = new StringBuilder();
+            sb.Append("Register file content : \n");
+            int i = 0;
+            foreach (int n in regs)
+            {
+                string temp = $"index = {i++,10} , reg_out : signed = {n,11} , unsigned = {(uint)n,10}\n";
+                sb.Append(temp);
+            }
+            return sb;
+        }
+
+        public static StringBuilder get_DM(List<string> DM)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("Data Memory Content : \n");
+            int i = 0;
+            foreach (string mem in DM)
+            {
+                string temp;
+
+                temp = $"Mem[{i++,4}] = {mem,11}\n";
+
+                sb.Append(temp);
+            }
+            return sb;
         }
     }
+    public static class SingleCycle
+    {
+        //void mem(ref Instruction inst)
+        //{
+        //    if (inst.mnem == Mnemonic.lw)
+        //    {
+        //        if (!is_in_range_inc(inst.aluout, 0, DM.Count - 1))
+        //        {
+        //            Exception e = new Exception($"Memory address {inst.aluout} is an invalid memory address")
+        //            {
+        //                Source = "SingleCycle::DataMemory"
+        //            };
+        //            throw e;
+        //        }
+        //        string smemout = DM[inst.aluout];
+        //        inst.memout = Convert.ToInt32(smemout);
+        //    }
+        //    else if (inst.mnem == Mnemonic.sw)
+        //    {
+        //        string memin = Convert.ToString(inst.rt);
+        //        if (!is_in_range_inc(inst.aluout, 0, DM.Count - 1))
+        //        {
+        //            Exception e = new Exception($"Memory address {inst.aluout} is an invalid memory address")
+        //            {
+        //                Source = "SingleCycle::DataMemory"
+        //            };
+        //            throw e;
+        //        }
+        //        DM[inst.aluout] = memin;
+        //    }
+        //}
+        //void write_back(Instruction inst)
+        //{
+        //    if (inst.mnem == Mnemonic.hlt)
+        //        hlt = true;
+
+        //    if (iswb(inst.mnem) && inst.rdind != 0)
+        //    {
+        //        if (!is_in_range_inc(inst.rdind, 0, 31))
+        //        {
+        //            Exception e = new Exception($"register index {inst.rdind} is an invalid index")
+        //            {
+        //                Source = "SingleCycle::write_back"
+        //            };
+        //            throw e;
+        //        }
+        //        regs[inst.rdind] = (inst.mnem == Mnemonic.lw) ? inst.memout : inst.aluout;
+        //        //Console.WriteLine($"writereg = {inst.rdind} , writedata = {regs[inst.rdind]}");
+        //    }
+        //}
+        public static (int, List<int>, List<string>) Run(List<string> MachingCodes, List<string> DataMemoryInit, uint IM_SIZE, uint DM_SIZE)
+        {
+            const int MAX_CLOCKS = 100 * 1000 * 1000;
+
+            string nop = "0".PadLeft(32, '0');
+            int PC = 0;
+            bool hlt = false;
+            int cycles = 0;
+
+            List<string> InstructionMemory = [];
+            InstructionMemory.AddRange(MachingCodes);
+            int imcount = InstructionMemory.Count;
+            for (int i = 0; i < IM_SIZE - imcount; i++) InstructionMemory.Add(nop);
+
+            List<int> RegisterFile = [];
+            for (int i = 0; i < 32; i++) RegisterFile.Add(0);
+
+            List<string> DataMemory = [];
+            DataMemory.AddRange(DataMemoryInit);
+            int dmcount = DataMemory.Count;
+            for (int i = 0; i < DM_SIZE - dmcount; i++) DataMemory.Add("0");
+
+            while (!hlt && cycles < MAX_CLOCKS)
+            {
+                cycles++;
+            }
+            return (cycles, RegisterFile, DataMemory);
+        }
     }
+}
