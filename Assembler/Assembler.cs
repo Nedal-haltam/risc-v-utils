@@ -94,9 +94,11 @@ namespace Assembler
         {
             readonly static Dictionary<string, InstInfo> Infos = new()
             {
+                // U-Type
                 {"lui"   , new("0110111", "", "")},
                 {"auipc" , new("0010111", "", "")},
-
+                {"jal"   , new("1111111", "", "")},
+                // I-Type
                 {"addi"  , new("0010011", "000", "")},
                 {"slti"  , new("0010011", "010", "")},
                 {"sltiu" , new("0010011", "011", "")},
@@ -106,8 +108,28 @@ namespace Assembler
                 {"slli"  , new("0010011", "001", "")},
                 {"srli"  , new("0010011", "101", "")},
                 {"srai"  , new("0010011", "101", "")},
-
+                {"ecall" , new("1110011", "000", "")},
+                {"lb"    , new("0000011", "000", "")},
+                {"lh"    , new("0000011", "001", "")},
+                {"lw"    , new("0000011", "010", "")},
+                {"lbu"   , new("0000011", "100", "")},
+                {"lhu"   , new("0000011", "101", "")},
+                {"jalr"  , new("1110111", "000", "")},
+                // S-Type
+                {"sb"    , new("0100011", "000", "")},
+                {"sh"    , new("0100011", "001", "")},
+                {"sw"    , new("0100011", "010", "")},
+                // R-Type
                 {"add"   , new("0110011", "000", "0000000")},
+                {"sub"   , new("0110011", "000", "0110000")},
+                {"sll"   , new("0110011", "001", "0000000")},
+                {"slt"   , new("0110011", "010", "0000000")},
+                {"sltu"  , new("0110011", "011", "0000000")},
+                {"xor"   , new("0110011", "100", "0000000")},
+                {"srl"   , new("0110011", "101", "0000000")},
+                {"sra"   , new("0110011", "101", "0100000")},
+                {"or"    , new("0110011", "110", "0000000")},
+                {"and"   , new("0110011", "111", "0000000")},
             };
             public static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
             {
@@ -175,7 +197,7 @@ namespace Assembler
                 case "lui": 
                     {
                         // lui rd,imm
-                        // x[rd] = sext(immediate[31:12] << 12)
+                        // x[rd] = SignExtended(immediate[31:12] << 12)
                         Check(mnem, ts.Count, 3);
                         string rd = Getregindex(ts[1].m_value);
                         string imm = ts[2].m_value;
@@ -187,19 +209,19 @@ namespace Assembler
                 case "auipc": 
                     {
                         // auipc rd,imm
-                        // x[rd] = pc + sext(immediate[31:12] << 12)
+                        // x[rd] = pc + SignExtended(immediate[31:12] << 12)
                         Check(mnem, ts.Count, 3);
                         string rd = Getregindex(ts[1].m_value);
                         string imm = ts[2].m_value;
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 19, 20);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0')[..20];
                         return [INSTRUCTIONS.GetUtypeInst(mnem, imm, rd)];
                     }
                 case "addi":
                     {
                         // addi rd,rs1,imm
-                        // x[rd] = x[rs1] + sext(immediate)
+                        // x[rd] = x[rs1] + SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
                         string rd = Getregindex(ts[1].m_value);
                         string rs1 = Getregindex(ts[2].m_value);
@@ -221,8 +243,8 @@ namespace Assembler
                 case "slti":
                     {
                         // slti rd,rs1,imm
-                        // x[rd] = x[rs1] <s sext(immediate)
-                        // x[rd] = (signed(x[rs1]) < signed(sext(immediate))) ? 1 : 0
+                        // x[rd] = x[rs1] <s SignExtended(immediate)
+                        // x[rd] = (signed(x[rs1]) < signed(SignExtended(immediate))) ? 1 : 0
                         Check(mnem, ts.Count, 4);
                         string rd = Getregindex(ts[1].m_value);
                         string rs1 = Getregindex(ts[2].m_value);
@@ -235,9 +257,9 @@ namespace Assembler
                 case "sltiu":
                     {
                         // sltiu rd,rs1,imm
-                        // x[rd] = x[rs1] <u sext(immediate)
+                        // x[rd] = x[rs1] <u SignExtended(immediate)
                         // the difference is that the numbers are treated as unsigned instead
-                        // x[rd] = (unsigned(x[rs1]) < unsigned(sext(immediate))) ? 1 : 0
+                        // x[rd] = (unsigned(x[rs1]) < unsigned(ZeroExtended(immediate))) ? 1 : 0
                         Check(mnem, ts.Count, 4);
                         string rd = Getregindex(ts[1].m_value);
                         string rs1 = Getregindex(ts[2].m_value);
@@ -250,7 +272,7 @@ namespace Assembler
                 case "xori":
                     {
                         // xori rd,rs1,imm
-                        // x[rd] = x[rs1] ^ sext(immediate)
+                        // x[rd] = x[rs1] ^ SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
                         string rd = Getregindex(ts[1].m_value);
                         string rs1 = Getregindex(ts[2].m_value);
@@ -263,7 +285,7 @@ namespace Assembler
                 case "not":
                     {
                         // not rd,rs1
-                        // x[rd] = x[rs1] ^ sext(-1)
+                        // x[rd] = x[rs1] ^ SignExtended(-1)
                         Check(mnem, ts.Count, 3);
                         string rs1 = Getregindex(ts[2].m_value);
                         string rd = Getregindex(ts[1].m_value);
@@ -272,7 +294,7 @@ namespace Assembler
                 case "ori":
                     {
                         // ori rd,rs1,imm
-                        // x[rd] = x[rs1] | sext(immediate)
+                        // x[rd] = x[rs1] | SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
                         string rd = Getregindex(ts[1].m_value);
                         string rs1 = Getregindex(ts[2].m_value);
@@ -285,7 +307,7 @@ namespace Assembler
                 case "andi":
                     {
                         // andi rd,rs1,imm
-                        // x[rd] = x[rs1] & sext(immediate)
+                        // x[rd] = x[rs1] & SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
                         string rd = Getregindex(ts[1].m_value);
                         string rs1 = Getregindex(ts[2].m_value);
@@ -352,9 +374,247 @@ namespace Assembler
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
 
                     }
+                case "sub":
+                    {
+                        // sub rd,rs1,rs2
+                        // x[rd] = x[rs1] - x[rs2]
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "sll":
+                    {
+                        // sll rd,rs1,rs2
+                        // x[rd] = x[rs1] << x[rs2]
+                        // NOTE: Performs logical left shift on the value in register rs1 by the shift amount held in the
+                        // ```lower 5 bits of register rs2```
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "slt":
+                    {
+                        // slt rd,rs1,rs2
+                        // x[rd] = x[rs1] <s x[rs2]
+                        // x[rd] = (signed(x[rs1]) < signed(x[rs2])) ? 1 : 0
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "sltu":
+                    {
+                        // sltu rd,rs1,rs2
+                        // x[rd] = x[rs1] <u x[rs2]
+                        // x[rd] = (unsigned(x[rs1]) < unsigned(x[rs2])) ? 1 : 0
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "xor":
+                    {
+                        // xor rd,rs1,rs2
+                        // x[rd] = x[rs1] ^ x[rs2]
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "srl":
+                    {
+                        // srl rd,rs1,rs2
+                        // x[rd] = x[rs1] >>u x[rs2]
+                        // NOTE: Logical right shift on the value in register rs1 by the shift amount held in the
+                        // ```lower 5 bits of register rs2```
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "sra":
+                    {
+                        // sra rd,rs1,rs2
+                        // x[rd] = x[rs1] >>s x[rs2]
+                        // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
+                        // ```lower 5 bits of register rs2```
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "or":
+                    {
+                        // or rd,rs1,rs2
+                        // x[rd] = x[rs1] | x[rs2]
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "and":
+                    {
+                        // and rd,rs1,rs2
+                        // x[rd] = x[rs1] & x[rs2]
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "ecall":
+                    {
+                        // ecall
+                        // RaiseException(EnvironmentCall)
+                        return [INSTRUCTIONS.GetItypeInst(mnem, "0".PadLeft(12, '0'), "00000", "00000")];
+                    }
+                case "lb":
+                    {
+                        // lb rd,offset(rs1)
+                        // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][7:0])
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                    }
+                case "lh":
+                    {
+                        // lh rd,offset(rs1)
+                        // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][15:0])
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                    }
+                case "lw":
+                    {
+                        // lw rd,offset(rs1)
+                        // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][31:0])
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                    }
+                case "lbu":
+                    {
+                        // lbu rd,offset(rs1)
+                        // x[rd] = ZeroExtended(M[x[rs1] + SignExtended(offset)][7:0])
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                    }
+                case "lhu":
+                    {
+                        // lhu rd,offset(rs1)
+                        // x[rd] = ZeroExtended(M[x[rs1] + SignExtended(offset)][15:0])
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                    }
+                case "sb":
+                    {
+                        // sb rs2,offset(rs1)
+                        // M[x[rs1] + SignExtended(offset)] = x[rs2][7:0]
+                        // NOTE: Store 8-bit, values from the
+                        // ```low bits of register rs2 to memory.```
+                        string rs2 = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetStypeInst(mnem, offset, rs1, rs2)];
+                    }
+                case "sh":
+                    {
+                        // sh rs2,offset(rs1)
+                        // M[x[rs1] + SignExtended(offset)] = x[rs2][15:0]
+                        // NOTE: Store 16-bit, values from the
+                        // ```low bits of register rs2 to memory.```
+                        string rs2 = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetStypeInst(mnem, offset, rs1, rs2)];
+                    }
+                case "sw":
+                    {
+                        // sw rs2,offset(rs1)
+                        // M[x[rs1] + SignExtended(offset)] = x[rs2][31:0]
+                        string rs2 = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        string rs1 = Getregindex(ts[3].m_value);
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetStypeInst(mnem, offset, rs1, rs2)];
+                    }
+                case "jal":
+                    {
+                        // jal rd,offset
+                        // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
+                        string rd = Getregindex(ts[1].m_value);
+                        string offset = ts[2].m_value;
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 20, 20); // offset = offset[20:1]
+                        // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
+                        //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
+                        return [INSTRUCTIONS.GetUtypeInst(mnem, offset, rd)];
+                    }
+                case "jalr":
+                    {
+                        // jalr rd,rs1,offset
+                        // t =pc+4; pc=(x[rs1]+SignExtended(offset))&~1; x[rd]=t
+                        // NOTE: the steps in the line above are important and should be implemented exactly as shown
+                        // ofcourse they are gonna be executed in parallel in hardware but should be taken into account when performing the operation
+                        string rd = ts[1].m_value;
+                        string rs1 = ts[2].m_value;
+                        string offset = ts[3].m_value;
+                        if (!UInt32.TryParse(offset, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
+                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                    }
                 default:
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic `{mnem}`\n", 1);
-                    return [];
+                    {
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic `{mnem}`\n", 1);
+                        return [];
+                    }
             }
         }
         List<string> GetMachineCodeOfProg(ref Program program)
