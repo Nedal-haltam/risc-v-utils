@@ -128,7 +128,7 @@ namespace Assembler
                 if (!Infos.ContainsKey(mnem))
                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
-                return imm12.Substring(0, 7) + rs2 + rs1 + info.Funct3 + imm12.Substring(7, 5) + info.Opcode;
+                return imm12[..7] + rs2 + rs1 + info.Funct3 + imm12.Substring(7, 5) + info.Opcode;
             }
             public static string GetUtypeInst(string mnem, string imm20, string rd)
             {
@@ -156,7 +156,7 @@ namespace Assembler
                 return "";
             }
         }
-        void Check(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction");
+        private static void Check(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction");
         List <string> GetMcOfInst(Instruction inst)
         {
             // references:
@@ -334,7 +334,7 @@ namespace Assembler
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
-                        imm = imm.Substring(0, 1) + "1" + imm.Substring(2);
+                        imm = string.Concat(imm.AsSpan()[..1], "1", imm.AsSpan(2));
                         return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "add":
@@ -362,7 +362,7 @@ namespace Assembler
             }
             return mcs;
         }
-        List<Instruction> GetPseudo(Instruction inst)
+        static List<Instruction> GetPseudo(Instruction inst)
         {
             string mnem = inst.m_tokens[0].m_value;
             if ((mnem == "bltz" || mnem == "bgez") && inst.m_tokens.Count == 3)
@@ -417,7 +417,7 @@ namespace Assembler
                 return [];
             }
         }
-        char? peek(int offset = 0)
+        char? Peek(int offset = 0)
         {
             if (m_curr_index + offset < m_curr_inst.Length)
             {
@@ -425,25 +425,25 @@ namespace Assembler
             }
             return null;
         }
-        char? peek(char type, int offset = 0)
+        char? Peek(char type, int offset = 0)
         {
-            char? token = peek(offset);
+            char? token = Peek(offset);
             if (token.HasValue && token.Value == type)
             {
                 return token;
             }
             return null;
         }
-        char consume()
+        char Consume()
         {
             return m_curr_inst.ElementAt(m_curr_index++);
         }
         bool IsComment()
         {
-            return (peek('/').HasValue && peek('/', 1).HasValue) || peek('#').HasValue;
+            return (Peek('/').HasValue && Peek('/', 1).HasValue) || Peek('#').HasValue;
         }
 
-        string Is_valid_label(Instruction label)
+        static string Is_valid_label(Instruction label)
         {
             if (label.m_tokens.Count > 0 && label.m_tokens[0].m_value.Contains(':'))
             {
@@ -505,9 +505,9 @@ namespace Assembler
         {
             StringBuilder buffer = new();
             Instruction instruction = new();
-            while (peek().HasValue)
+            while (Peek().HasValue)
             {
-                char? t = peek();
+                char? t = Peek();
                 char c;
                 if (t.HasValue)
                     c = t.Value;
@@ -515,7 +515,7 @@ namespace Assembler
 
                 if (char.IsWhiteSpace(c) || c == ',')
                 {
-                    consume();
+                    Consume();
                     if (buffer.Length > 0)
                     {
                         instruction.m_tokens.Add(new(buffer.ToString()));
@@ -540,12 +540,12 @@ namespace Assembler
                     }
                     buffer.Append(char.ToLower(c));
                     instruction.m_tokens.Add(new(buffer.ToString()));
-                    consume();
+                    Consume();
                     buffer.Clear();
                 }
                 else if (c == ':')
                 {
-                    consume();
+                    Consume();
                     buffer.Append(char.ToLower(c));
                     if (buffer.Length > 0)
                     {
@@ -556,7 +556,7 @@ namespace Assembler
                 else
                 {
                     buffer.Append(char.ToLower(c));
-                    consume();
+                    Consume();
                 }
             }
             if (buffer.Length > 0)
