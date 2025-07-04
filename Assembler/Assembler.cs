@@ -44,11 +44,11 @@ namespace Assembler
 
     public class Assembler
     {
-        readonly Dictionary<string, int> labels = [];
+        private readonly Dictionary<string, int> labels = [];
         List<string> m_prog = [];
-        string m_curr_inst = "";
-        int m_curr_index = 0;
-        readonly Dictionary<string, int> REG_LIST = new()
+        private string m_curr_inst = "";
+        private int m_curr_index = 0;
+        public readonly Dictionary<string, int> REG_LIST = new()
         {
             {"zero", 0},
             {"ra"  , 1},
@@ -92,12 +92,22 @@ namespace Assembler
         }
         public static class INSTRUCTIONS
         {
-            public static Dictionary<string, InstInfo> Infos = new()
+            readonly static Dictionary<string, InstInfo> Infos = new()
             {
                 {"lui"   , new("0110111", "", "")},
                 {"auipc" , new("0010111", "", "")},
-                {"addi" , new("0010011", "000", "")},
-                {"slti" , new("0010011", "010", "")},
+
+                {"addi"  , new("0010011", "000", "")},
+                {"slti"  , new("0010011", "010", "")},
+                {"sltiu" , new("0010011", "011", "")},
+                {"xori"  , new("0010011", "100", "")},
+                {"ori"   , new("0010011", "110", "")},
+                {"andi"  , new("0010011", "111", "")},
+                {"slli"  , new("0010011", "001", "")},
+                {"srli"  , new("0010011", "101", "")},
+                {"srai"  , new("0010011", "101", "")},
+
+                {"add"   , new("0110011", "000", "0000000")},
             };
             public static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
             {
@@ -187,8 +197,8 @@ namespace Assembler
                         // addi rd,rs1,imm
                         // x[rd] = x[rs1] + sext(immediate)
                         Check(mnem, ts.Count, 4);
-                        string rd = ts[1].m_value;
-                        string rs1 = ts[2].m_value;
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
                         string imm = ts[3].m_value;
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
@@ -200,8 +210,8 @@ namespace Assembler
                         // mv rd,rs1
                         // x[rd] = x[rs1]
                         Check(mnem, ts.Count, 3);
-                        string rs1 = ts[2].m_value;
-                        string rd = ts[1].m_value;
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rd = Getregindex(ts[1].m_value);
                         return [INSTRUCTIONS.GetItypeInst("addi", "0".PadLeft(12, '0'), rs1, rd)];
                     }
                 case "slti":
@@ -209,17 +219,138 @@ namespace Assembler
                         // slti rd,rs1,imm
                         // x[rd] = x[rs1] <s sext(immediate)
                         // x[rd] = (signed(x[rs1]) < signed(sext(immediate))) ? 1 : 0
-                        string rd = ts[1].m_value;
-                        string rs1 = ts[2].m_value;
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
                         string imm = ts[3].m_value;
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
                         return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
                     }
+                case "sltiu":
+                    {
+                        // sltiu rd,rs1,imm
+                        // x[rd] = x[rs1] <u sext(immediate)
+                        // the difference is that the numbers are treated as unsigned instead
+                        // x[rd] = (unsigned(x[rs1]) < unsigned(sext(immediate))) ? 1 : 0
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "xori":
+                    {
+                        // xori rd,rs1,imm
+                        // x[rd] = x[rs1] ^ sext(immediate)
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "not":
+                    {
+                        // not rd,rs1
+                        // x[rd] = x[rs1] ^ sext(-1)
+                        Check(mnem, ts.Count, 3);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rd = Getregindex(ts[1].m_value);
+                        return [INSTRUCTIONS.GetItypeInst("xori", "1".PadLeft(12, '1'), rs1, rd)];
+                    }
+                case "ori":
+                    {
+                        // ori rd,rs1,imm
+                        // x[rd] = x[rs1] | sext(immediate)
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "andi":
+                    {
+                        // andi rd,rs1,imm
+                        // x[rd] = x[rs1] & sext(immediate)
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "slli":
+                    {
+                        // slli rd,rs1,shamt
+                        // x[rd] = x[rs1] << shamt
+                        // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
+                        // but in RV32 the shamt is 5-bits
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "srli":
+                    {
+                        // srli rd,rs1,shamt
+                        // x[rd] = x[rs1] >>u shamt
+                        // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
+                        // but in RV32 the shamt is 5-bits
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "srai":
+                    {
+                        // srai rd,rs1,shamt
+                        // x[rd] = x[rs1] >>s shamt
+                        // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
+                        // but in RV32 the shamt is 5-bits
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string imm = ts[3].m_value;
+                        if (!UInt32.TryParse(imm, out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
+                        imm = imm.Substring(0, 1) + "1" + imm.Substring(2);
+                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                    }
+                case "add":
+                    {
+                        // add rd,rs1,rs2
+                        // x[rd] = x[rs1] + x[rs2]
+                        Check(mnem, ts.Count, 4);
+                        string rd = Getregindex(ts[1].m_value);
+                        string rs1 = Getregindex(ts[2].m_value);
+                        string rs2 = Getregindex(ts[3].m_value);
+                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+
+                    }
                 default:
                     Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic `{mnem}`\n", 1);
-                    return new();
+                    return [];
             }
         }
         List<string> GetMachineCodeOfProg(ref Program program)
