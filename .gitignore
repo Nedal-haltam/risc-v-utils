@@ -6,3 +6,6 @@
 !*.sln
 !.gitignore
 !.gitattributes
+/LibCPU/obj
+/LibUtil/obj
+/Assembler/obj
