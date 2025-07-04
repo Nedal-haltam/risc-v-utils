@@ -111,6 +111,7 @@ namespace Assembler
             };
             public static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
             {
+                Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
                 if (!Infos.ContainsKey(mnem))
                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
@@ -118,6 +119,7 @@ namespace Assembler
             }
             public static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
             {
+                Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rd={rd.Length}");
                 if (!Infos.ContainsKey(mnem))
                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
@@ -125,6 +127,7 @@ namespace Assembler
             }
             public static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
             {
+                Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rs2.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rs2={rs2.Length}");
                 if (!Infos.ContainsKey(mnem))
                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 InstInfo info = Infos[mnem];
@@ -132,6 +135,7 @@ namespace Assembler
             }
             public static string GetUtypeInst(string mnem, string imm20, string rd)
             {
+                Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm20={imm20.Length}, rd={rd.Length}");
                 if (!Infos.ContainsKey(mnem))
                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
                 return imm20 + rd + Infos[mnem].Opcode;
