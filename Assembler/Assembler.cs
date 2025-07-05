@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using static System.Text.RegularExpressions.Regex;
@@ -82,79 +83,77 @@ namespace Assembler
             public string Funct3 = Funct3;
             public string Funct7 = Funct7;
         }
-        static class INSTRUCTIONS
+        readonly static Dictionary<string, InstInfo> Infos = new()
         {
-            readonly static Dictionary<string, InstInfo> Infos = new()
-            {
-                // U-Type
-                {"lui"   , new("0110111", "", "")},
-                {"auipc" , new("0010111", "", "")},
-                {"jal"   , new("1111111", "", "")},
-                // I-Type
-                {"addi"  , new("0010011", "000", "")},
-                {"slti"  , new("0010011", "010", "")},
-                {"sltiu" , new("0010011", "011", "")},
-                {"xori"  , new("0010011", "100", "")},
-                {"ori"   , new("0010011", "110", "")},
-                {"andi"  , new("0010011", "111", "")},
-                {"slli"  , new("0010011", "001", "")},
-                {"srli"  , new("0010011", "101", "")},
-                {"srai"  , new("0010011", "101", "")},
-                {"ecall" , new("1110011", "000", "")},
-                {"lb"    , new("0000011", "000", "")},
-                {"lh"    , new("0000011", "001", "")},
-                {"lw"    , new("0000011", "010", "")},
-                {"lbu"   , new("0000011", "100", "")},
-                {"lhu"   , new("0000011", "101", "")},
-                {"jalr"  , new("1110111", "000", "")},
-                // S-Type
-                {"sb"    , new("0100011", "000", "")},
-                {"sh"    , new("0100011", "001", "")},
-                {"sw"    , new("0100011", "010", "")},
-                // R-Type
-                {"add"   , new("0110011", "000", "0000000")},
-                {"sub"   , new("0110011", "000", "0110000")},
-                {"sll"   , new("0110011", "001", "0000000")},
-                {"slt"   , new("0110011", "010", "0000000")},
-                {"sltu"  , new("0110011", "011", "0000000")},
-                {"xor"   , new("0110011", "100", "0000000")},
-                {"srl"   , new("0110011", "101", "0000000")},
-                {"sra"   , new("0110011", "101", "0100000")},
-                {"or"    , new("0110011", "110", "0000000")},
-                {"and"   , new("0110011", "111", "0000000")},
-            };
-            public static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
-            {
-                Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
-                if (!Infos.ContainsKey(mnem))
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
-                InstInfo info = Infos[mnem];
-                return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
-            }
-            public static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
-            {
-                Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rd={rd.Length}");
-                if (!Infos.ContainsKey(mnem))
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
-                InstInfo info = Infos[mnem];
-                return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
-            }
-            public static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
-            {
-                Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rs2.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rs2={rs2.Length}");
-                if (!Infos.ContainsKey(mnem))
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
-                InstInfo info = Infos[mnem];
-                return imm12[..7] + rs2 + rs1 + info.Funct3 + imm12.Substring(7, 5) + info.Opcode;
-            }
-            public static string GetUtypeInst(string mnem, string imm20, string rd)
-            {
-                Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm20={imm20.Length}, rd={rd.Length}");
-                if (!Infos.ContainsKey(mnem))
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
-                return imm20 + rd + Infos[mnem].Opcode;
-            }
+            // U-Type
+            {"lui"   , new("0110111", "", "")},
+            {"auipc" , new("0010111", "", "")},
+            {"jal"   , new("1111111", "", "")},
+            // I-Type
+            {"addi"  , new("0010011", "000", "")},
+            {"slti"  , new("0010011", "010", "")},
+            {"sltiu" , new("0010011", "011", "")},
+            {"xori"  , new("0010011", "100", "")},
+            {"ori"   , new("0010011", "110", "")},
+            {"andi"  , new("0010011", "111", "")},
+            {"slli"  , new("0010011", "001", "")},
+            {"srli"  , new("0010011", "101", "")},
+            {"srai"  , new("0010011", "101", "")},
+            {"ecall" , new("1110011", "000", "")},
+            {"lb"    , new("0000011", "000", "")},
+            {"lh"    , new("0000011", "001", "")},
+            {"lw"    , new("0000011", "010", "")},
+            {"lbu"   , new("0000011", "100", "")},
+            {"lhu"   , new("0000011", "101", "")},
+            {"jalr"  , new("1110111", "000", "")},
+            // S-Type
+            {"sb"    , new("0100011", "000", "")},
+            {"sh"    , new("0100011", "001", "")},
+            {"sw"    , new("0100011", "010", "")},
+            // R-Type
+            {"add"   , new("0110011", "000", "0000000")},
+            {"sub"   , new("0110011", "000", "0110000")},
+            {"sll"   , new("0110011", "001", "0000000")},
+            {"slt"   , new("0110011", "010", "0000000")},
+            {"sltu"  , new("0110011", "011", "0000000")},
+            {"xor"   , new("0110011", "100", "0000000")},
+            {"srl"   , new("0110011", "101", "0000000")},
+            {"sra"   , new("0110011", "101", "0100000")},
+            {"or"    , new("0110011", "110", "0000000")},
+            {"and"   , new("0110011", "111", "0000000")},
+        };
+        static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
+        {
+            Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
+            if (!Infos.ContainsKey(mnem))
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+            InstInfo info = Infos[mnem];
+            return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
         }
+        static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
+        {
+            Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rd={rd.Length}");
+            if (!Infos.ContainsKey(mnem))
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+            InstInfo info = Infos[mnem];
+            return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
+        }
+        static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
+        {
+            Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rs2.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rs2={rs2.Length}");
+            if (!Infos.ContainsKey(mnem))
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+            InstInfo info = Infos[mnem];
+            return imm12[..7] + rs2 + rs1 + info.Funct3 + imm12.Substring(7, 5) + info.Opcode;
+        }
+        static string GetUtypeInst(string mnem, string imm20, string rd)
+        {
+            Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm20={imm20.Length}, rd={rd.Length}");
+            if (!Infos.ContainsKey(mnem))
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+            return imm20 + rd + Infos[mnem].Opcode;
+        }
+
         static string GetRegisterIndex(string reg)
         {
             if (reg.StartsWith('$') || reg.StartsWith('x'))
@@ -174,18 +173,31 @@ namespace Assembler
                 return "";
             }
         }
+        static string GetImmediate(string imm)
+        {
+            if (imm.StartsWith("0x"))
+            {
+                if (!UInt32.TryParse(imm, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out UInt32 value))
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                return Convert.ToString(value, 2).PadLeft(32, '0');
+            }
+            else
+            {
+                if (!UInt32.TryParse(imm, out UInt32 value))
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+                return Convert.ToString(value, 2).PadLeft(32, '0');
+            }
+        }
         static void Check(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction");
         static List<string> Instruction2MachineCodes(Instruction inst)
         {
             // references:
             // - https://msyksphinz-self.github.io/riscv-isadoc/
             // - https://riscv.github.io/riscv-isa-manual/snapshot/unprivileged/
-            Shartilities.TODO($"assemble here, my friend");
             List<string> ts = inst.m_tokens;
-            string mnem = ts[0];
+            string mnem = ts[0].ToLower();
             // TODO:
             //      - support negative numbers
-            //      - support hex parsing
             switch (mnem)
             {
                 case "lui":
@@ -195,10 +207,8 @@ namespace Assembler
                         Check(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
                         string imm = ts[2];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0')[..20];
-                        return [INSTRUCTIONS.GetUtypeInst(mnem, imm, rd)];
+                        imm = GetImmediate(imm)[..20];
+                        return [GetUtypeInst(mnem, imm, rd)];
                     }
                 case "auipc":
                     {
@@ -207,10 +217,8 @@ namespace Assembler
                         Check(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
                         string imm = ts[2];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0')[..20];
-                        return [INSTRUCTIONS.GetUtypeInst(mnem, imm, rd)];
+                        imm = GetImmediate(imm)[..20];
+                        return [GetUtypeInst(mnem, imm, rd)];
                     }
                 case "addi":
                     {
@@ -220,10 +228,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "mv":
                     {
@@ -232,7 +238,7 @@ namespace Assembler
                         Check(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rd = GetRegisterIndex(ts[1]);
-                        return [INSTRUCTIONS.GetItypeInst("addi", "0".PadLeft(12, '0'), rs1, rd)];
+                        return [GetItypeInst("addi", "0".PadLeft(12, '0'), rs1, rd)];
                     }
                 case "slti":
                     {
@@ -243,10 +249,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "sltiu":
                     {
@@ -258,10 +262,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "xori":
                     {
@@ -271,10 +273,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "not":
                     {
@@ -283,7 +283,7 @@ namespace Assembler
                         Check(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rd = GetRegisterIndex(ts[1]);
-                        return [INSTRUCTIONS.GetItypeInst("xori", "1".PadLeft(12, '1'), rs1, rd)];
+                        return [GetItypeInst("xori", "1".PadLeft(12, '1'), rs1, rd)];
                     }
                 case "ori":
                     {
@@ -293,10 +293,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "andi":
                     {
@@ -306,10 +304,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "slli":
                     {
@@ -321,10 +317,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 4, 5).PadLeft(12, '0');
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "srli":
                     {
@@ -336,10 +330,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        imm = GetImmediate(imm).Substring(31 - 4, 5).PadLeft(12, '0');
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "srai":
                     {
@@ -351,11 +343,9 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        if (!UInt32.TryParse(imm, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
-                        imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
+                        imm = GetImmediate(imm).Substring(31 - 4, 5).PadLeft(12, '0');
                         imm = string.Concat(imm.AsSpan()[..1], "1", imm.AsSpan(2));
-                        return [INSTRUCTIONS.GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "add":
                     {
@@ -365,7 +355,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
 
                     }
                 case "sub":
@@ -376,7 +366,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "sll":
                     {
@@ -388,7 +378,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "slt":
                     {
@@ -399,7 +389,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "sltu":
                     {
@@ -410,7 +400,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "xor":
                     {
@@ -420,7 +410,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "srl":
                     {
@@ -432,7 +422,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "sra":
                     {
@@ -444,7 +434,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "or":
                     {
@@ -454,7 +444,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "and":
                     {
@@ -464,13 +454,13 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rs2 = GetRegisterIndex(ts[3]);
-                        return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "ecall":
                     {
                         // ecall
                         // RaiseException(EnvironmentCall)
-                        return [INSTRUCTIONS.GetItypeInst(mnem, "0".PadLeft(12, '0'), "00000", "00000")];
+                        return [GetItypeInst(mnem, "0".PadLeft(12, '0'), "00000", "00000")];
                     }
                 case "lb":
                     {
@@ -480,10 +470,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
                 case "lh":
                     {
@@ -493,10 +481,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
                 case "lw":
                     {
@@ -506,10 +492,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
                 case "lbu":
                     {
@@ -519,10 +503,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
                 case "lhu":
                     {
@@ -532,10 +514,8 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
                 case "sb":
                     {
@@ -546,10 +526,8 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetStypeInst(mnem, offset, rs1, rs2)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "sh":
                     {
@@ -560,10 +538,8 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetStypeInst(mnem, offset, rs1, rs2)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "sw":
                     {
@@ -572,10 +548,8 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetStypeInst(mnem, offset, rs1, rs2)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "jal":
                     {
@@ -583,12 +557,10 @@ namespace Assembler
                         // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 20, 20); // offset = offset[20:1]
+                        offset = GetImmediate(offset).Substring(31 - 20, 20); // offset = offset[20:1]
                         // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
                         //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
-                        return [INSTRUCTIONS.GetUtypeInst(mnem, offset, rd)];
+                        return [GetUtypeInst(mnem, offset, rd)];
                     }
                 case "jalr":
                     {
@@ -601,10 +573,8 @@ namespace Assembler
                         string rd = ts[1];
                         string rs1 = ts[2];
                         string offset = ts[3];
-                        if (!UInt32.TryParse(offset, out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
-                        offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
-                        return [INSTRUCTIONS.GetItypeInst(mnem, offset, rs1, rd)];
+                        offset = GetImmediate(offset).Substring(31 - 11, 12);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
                 default:
                     {
