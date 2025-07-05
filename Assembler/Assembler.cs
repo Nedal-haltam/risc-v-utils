@@ -1,22 +1,20 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using static System.Text.RegularExpressions.Regex;
 
 namespace Assembler
 {
-    public struct Token(string value)
-    {
-        public string value = value;
-    }
     public struct Instruction
     {
-        public List<Token> m_tokens;
+        public List<string> m_tokens;
         public int m_line;
         public Instruction()
         {
             m_line = -1;
             m_tokens = [];
         }
-        public Instruction(List<Token> tokens, int line)
+        public Instruction(List<string> tokens, int line)
         {
             m_tokens = tokens;
             m_line = line;
@@ -24,9 +22,9 @@ namespace Assembler
     }
     public struct Program
     {
-        public List<string> MachineCodes;
         public List<Instruction> Instructions;
         public List<string> DataMemoryValues;
+        public List<string> MachineCodes;
         public Program()
         {
             Instructions = [];
@@ -37,6 +35,11 @@ namespace Assembler
 
     public static class Assembler
     {
+        static readonly Dictionary<string, int?> DataSectionDirectives = new()
+        {
+            {".word"  , 4},
+            {".space" , null},
+        };
         static readonly Dictionary<string, int> REG_LIST = new()
         {
             {"zero", 0},
@@ -178,9 +181,11 @@ namespace Assembler
             // - https://msyksphinz-self.github.io/riscv-isadoc/
             // - https://riscv.github.io/riscv-isa-manual/snapshot/unprivileged/
             Shartilities.TODO($"assemble here, my friend");
-            List<Token> ts = inst.m_tokens;
-            string mnem = ts[0].value;
-            // TODO: support negative numbers
+            List<string> ts = inst.m_tokens;
+            string mnem = ts[0];
+            // TODO:
+            //      - support negative numbers
+            //      - support hex parsing
             switch (mnem)
             {
                 case "lui":
@@ -188,8 +193,8 @@ namespace Assembler
                         // lui rd,imm
                         // x[rd] = SignExtended(immediate[31:12] << 12)
                         Check(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string imm = ts[2].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string imm = ts[2];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0')[..20];
@@ -200,8 +205,8 @@ namespace Assembler
                         // auipc rd,imm
                         // x[rd] = pc + SignExtended(immediate[31:12] << 12)
                         Check(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string imm = ts[2].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string imm = ts[2];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0')[..20];
@@ -212,9 +217,9 @@ namespace Assembler
                         // addi rd,rs1,imm
                         // x[rd] = x[rs1] + SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -225,8 +230,8 @@ namespace Assembler
                         // mv rd,rs1
                         // x[rd] = x[rs1]
                         Check(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rd = GetRegisterIndex(ts[1].value);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1]);
                         return [INSTRUCTIONS.GetItypeInst("addi", "0".PadLeft(12, '0'), rs1, rd)];
                     }
                 case "slti":
@@ -235,9 +240,9 @@ namespace Assembler
                         // x[rd] = x[rs1] <s SignExtended(immediate)
                         // x[rd] = (signed(x[rs1]) < signed(SignExtended(immediate))) ? 1 : 0
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -250,9 +255,9 @@ namespace Assembler
                         // the difference is that the numbers are treated as unsigned instead
                         // x[rd] = (unsigned(x[rs1]) < unsigned(ZeroExtended(immediate))) ? 1 : 0
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -263,9 +268,9 @@ namespace Assembler
                         // xori rd,rs1,imm
                         // x[rd] = x[rs1] ^ SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -276,8 +281,8 @@ namespace Assembler
                         // not rd,rs1
                         // x[rd] = x[rs1] ^ SignExtended(-1)
                         Check(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rd = GetRegisterIndex(ts[1].value);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1]);
                         return [INSTRUCTIONS.GetItypeInst("xori", "1".PadLeft(12, '1'), rs1, rd)];
                     }
                 case "ori":
@@ -285,9 +290,9 @@ namespace Assembler
                         // ori rd,rs1,imm
                         // x[rd] = x[rs1] | SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -298,9 +303,9 @@ namespace Assembler
                         // andi rd,rs1,imm
                         // x[rd] = x[rs1] & SignExtended(immediate)
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -313,9 +318,9 @@ namespace Assembler
                         // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
                         // but in RV32 the shamt is 5-bits
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
@@ -328,9 +333,9 @@ namespace Assembler
                         // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
                         // but in RV32 the shamt is 5-bits
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
@@ -343,9 +348,9 @@ namespace Assembler
                         // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
                         // but in RV32 the shamt is 5-bits
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string imm = ts[3].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string imm = ts[3];
                         if (!UInt32.TryParse(imm, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
                         imm = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 4, 5).PadLeft(12, '0');
@@ -357,9 +362,9 @@ namespace Assembler
                         // add rd,rs1,rs2
                         // x[rd] = x[rs1] + x[rs2]
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
 
                     }
@@ -368,9 +373,9 @@ namespace Assembler
                         // sub rd,rs1,rs2
                         // x[rd] = x[rs1] - x[rs2]
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "sll":
@@ -380,9 +385,9 @@ namespace Assembler
                         // NOTE: Performs logical left shift on the value in register rs1 by the shift amount held in the
                         // ```lower 5 bits of register rs2```
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "slt":
@@ -391,9 +396,9 @@ namespace Assembler
                         // x[rd] = x[rs1] <s x[rs2]
                         // x[rd] = (signed(x[rs1]) < signed(x[rs2])) ? 1 : 0
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "sltu":
@@ -402,9 +407,9 @@ namespace Assembler
                         // x[rd] = x[rs1] <u x[rs2]
                         // x[rd] = (unsigned(x[rs1]) < unsigned(x[rs2])) ? 1 : 0
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "xor":
@@ -412,9 +417,9 @@ namespace Assembler
                         // xor rd,rs1,rs2
                         // x[rd] = x[rs1] ^ x[rs2]
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "srl":
@@ -424,9 +429,9 @@ namespace Assembler
                         // NOTE: Logical right shift on the value in register rs1 by the shift amount held in the
                         // ```lower 5 bits of register rs2```
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "sra":
@@ -436,9 +441,9 @@ namespace Assembler
                         // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
                         // ```lower 5 bits of register rs2```
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "or":
@@ -446,9 +451,9 @@ namespace Assembler
                         // or rd,rs1,rs2
                         // x[rd] = x[rs1] | x[rs2]
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "and":
@@ -456,9 +461,9 @@ namespace Assembler
                         // and rd,rs1,rs2
                         // x[rd] = x[rs1] & x[rs2]
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string rs1 = GetRegisterIndex(ts[2].value);
-                        string rs2 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
                         return [INSTRUCTIONS.GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 case "ecall":
@@ -472,9 +477,9 @@ namespace Assembler
                         // lb rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][7:0])
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -485,9 +490,9 @@ namespace Assembler
                         // lh rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][15:0])
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -498,9 +503,9 @@ namespace Assembler
                         // lw rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][31:0])
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -511,9 +516,9 @@ namespace Assembler
                         // lbu rd,offset(rs1)
                         // x[rd] = ZeroExtended(M[x[rs1] + SignExtended(offset)][7:0])
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -524,9 +529,9 @@ namespace Assembler
                         // lhu rd,offset(rs1)
                         // x[rd] = ZeroExtended(M[x[rs1] + SignExtended(offset)][15:0])
                         Check(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -538,9 +543,9 @@ namespace Assembler
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][7:0]
                         // NOTE: Store 8-bit, values from the
                         // ```low bits of register rs2 to memory.```
-                        string rs2 = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rs2 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -552,9 +557,9 @@ namespace Assembler
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][15:0]
                         // NOTE: Store 16-bit, values from the
                         // ```low bits of register rs2 to memory.```
-                        string rs2 = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rs2 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -564,9 +569,9 @@ namespace Assembler
                     {
                         // sw rs2,offset(rs1)
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][31:0]
-                        string rs2 = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
-                        string rs1 = GetRegisterIndex(ts[3].value);
+                        string rs2 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -576,8 +581,8 @@ namespace Assembler
                     {
                         // jal rd,offset
                         // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
-                        string rd = GetRegisterIndex(ts[1].value);
-                        string offset = ts[2].value;
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 20, 20); // offset = offset[20:1]
@@ -593,9 +598,9 @@ namespace Assembler
                         // x[rd] = t
                         // NOTE: the steps above are important and should be implemented exactly as shown
                         // ofcourse they are gonna be executed in parallel in hardware but should be taken into account when performing the operation
-                        string rd = ts[1].value;
-                        string rs1 = ts[2].value;
-                        string offset = ts[3].value;
+                        string rd = ts[1];
+                        string rs1 = ts[2];
+                        string offset = ts[3];
                         if (!UInt32.TryParse(offset, out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{offset}`\n", 1);
                         offset = Convert.ToString(value, 2).PadLeft(32, '0').Substring(31 - 11, 12);
@@ -610,23 +615,6 @@ namespace Assembler
         }
         //static List<Instruction> GetPseudo(Instruction inst)
         //{
-        //    string mnem = inst.m_tokens[0].value;
-        //    if ((mnem == "bltz" || mnem == "bgez") && inst.m_tokens.Count == 3)
-        //    {
-        //        string branch = "";
-        //        if (mnem == "bltz")
-        //        {
-        //            branch = "bne";
-        //        }
-        //        else if (mnem == "bgez")
-        //        {
-        //            branch = "beq";
-        //        }
-        //        return [
-        //            new([new("slt"), new("$at"), new($"{inst.m_tokens[1].value}"), new("$0") ]),
-        //            new([new(branch), new("$at"), new("$0"), new($"{inst.m_tokens[2].value}") ]),
-        //        ];
-        //    }
         //    else if (mnem == "li" && inst.m_tokens.Count == 3)
         //    {
         //        return [
@@ -639,30 +627,15 @@ namespace Assembler
         //            new([new("ori"), new(inst.m_tokens[1].value), new("zero"), new(inst.m_tokens[2].value)])
         //        ];
         //    }
-        //    else if (mnem == "call")
-        //    {
-        //        return [
-        //            new([new("jal"), new(inst.m_tokens[1].value)])
-        //        ];
-        //    }
-        //    else if (mnem == "mv")
-        //    {
-        //        return [
-        //            new([new("or"), new(inst.m_tokens[1].value), new(inst.m_tokens[2].value), new("zero")])
-        //        ];
-        //    }
         //    else if (mnem == "ret")
         //    {
         //        return [
         //            new([new("jr"), new("ra")])
         //        ];
         //    }
-        //    else
-        //    {
-        //        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid pseudo instruction `{inst.m_tokens[0].value}`\n", 1);
-        //        return [];
-        //    }
         //}
+
+
         //public static List<string> GetInstsAsText(Assembler.Program program)
         //{
         //    List<string> ret = [];
@@ -681,137 +654,73 @@ namespace Assembler
         //    }
         //    return ret;
         //}
-        //public static (List<string>, List<string>, List<KeyValuePair<string, int>>) assemble_data_dir(List<string> data_dir)
-        //{
-        //    List<string> data = [];
-        //    List<KeyValuePair<string, int>> addresses = [];
-        //    int address = 0;
-        //    for (int i = 0; i < data_dir.Count; i++)
-        //    {
-        //        if (data_dir[i].IndexOf(":") == -1)
-        //            continue;
-        //        string name = data_dir[i].Substring(0, data_dir[i].IndexOf(":"));
-        //        if (data_dir[i].Substring(data_dir[i].IndexOf(":") + 1).IndexOf(":") == -1)
-        //        {
-        //            name = name.Trim();
-        //            int addr = address;
-        //            address += data_dir[i].Count(s => s == ',') + 1;
-        //            addresses.Add(new KeyValuePair<string, int>(name, addr));
-        //        }
-        //        else
-        //        {
-        //            name = name.Trim();
-        //            string temp = data_dir[i];
-        //            string[] datas = data_dir[i].Substring(temp.IndexOf(":")).Replace(".word", "").Split(':');
-        //            int addr = address;
-        //            address += Convert.ToInt32(datas[2]) - Convert.ToInt32(datas[1]) + 1;
-        //            addresses.Add(new KeyValuePair<string, int>(name, addr));
-        //        }
-        //    }
-        //    for (int i = 0; i < data_dir.Count; i++)
-        //    {
-        //        int index = data_dir[i].IndexOf(':');
-        //        if (index != -1)
-        //        {
-        //            string line = data_dir[i].Substring(index + 1);
-        //            line = line.Trim();
-        //            line = line.Replace(".word", "");
-        //            if (line.Contains(':'))
-        //            {
-        //                List<string> vals = line.Split(':').ToList();
-        //                int count = Convert.ToInt32(vals[1]) - Convert.ToInt32(vals[0]) + 1;
-        //                for (int j = 0; j < count; j++)
-        //                {
-        //                    data.Add("0");
-        //                }
-        //            }
-        //            else
-        //            {
-        //                List<string> vals = line.Split(',').ToList();
-        //                foreach (string val in vals)
-        //                {
-        //                    int number = 0;
-        //                    string snum = val.ToLower().Trim();
-        //                    try
-        //                    {
-        //                        if (snum.StartsWith("0x"))
-        //                            number = Convert.ToInt32(snum, 16);
-        //                        else
-        //                            number = Convert.ToInt32(snum);
-        //                    }
-        //                    catch (Exception)
-        //                    {
-        //                        number = 0;
-        //                        //throw new Exception("invalid number");
-        //                    }
-        //                    data.Add(number.ToString());
-        //                }
-        //            }
-        //        }
-        //    }
-        //    List<string> DM_INIT = [];
-        //    List<string> DM_vals = [];
-        //    for (int i = 0; i < data.Count; i++)
-        //    {
-        //        DM_vals.Add(data[i].ToString());
-        //        if (data[i][0] == '-')
-        //        {
-        //            string temp = $"DataMem[{i,2}] <= -32'd{data[i].Substring(1)};";
-        //            DM_INIT.Add(temp);
-        //        }
-        //        else
-        //        {
-        //            string temp = $"DataMem[{i,2}] <= 32'd{data[i]};";
-        //            DM_INIT.Add(temp);
-        //        }
-        //    }
 
-        //    return (DM_INIT, DM_vals, addresses);
-        //}
-        static (List<string>, List<string>) Get_directives(List<string> src)
+        static (List<(int, string)>, List<(int, string)>) GetTextDataSections(List<(int, string)> src)
         {
-            for (int i = 0; i < src.Count; i++)
-                src[i] = src[i].Trim();
-            src.RemoveAll(x => string.IsNullOrEmpty(x) || string.IsNullOrWhiteSpace(x));
+            int TextIndex = src.FindIndex(x => x.Item2 == ".section .text");
+            int DataIndex = src.FindIndex(x => x.Item2 == ".section .data");
 
-            int data_index = src.IndexOf(".section .data");
-            int text_index = src.IndexOf(".section .text");
+            List<(int, string)> DataSection = [];
+            List<(int, string)> TextSection = [];
 
-            List<string> curr_data_dir = [];
-            List<string> curr_text_dir = [];
-
-            if (text_index == -1)
+            if (TextIndex == -1)
                 Shartilities.Log(Shartilities.LogType.ERROR, $"text directive doesn't exist\n", 1);
 
-            if (data_index != -1)
+            if (DataIndex == -1)
             {
-                int count = (int)MathF.Abs(text_index - data_index);
-                if (data_index > text_index)
+                TextSection = src;
+            }
+            else
+            {
+                int count = (int)MathF.Abs(TextIndex - DataIndex);
+                if (DataIndex > TextIndex)
                 {
-                    curr_data_dir = src.GetRange(data_index, src.Count - count);
-                    curr_text_dir = src.GetRange(text_index, count);
+                    DataSection = src.GetRange(DataIndex, src.Count - count);
+                    TextSection = src.GetRange(TextIndex, count);
                 }
                 else
                 {
-                    curr_data_dir = src.GetRange(data_index, count);
-                    curr_text_dir = src.GetRange(text_index, src.Count - count);
+                    DataSection = src.GetRange(DataIndex, count);
+                    TextSection = src.GetRange(TextIndex, src.Count - count);
+                }
+                DataSection.RemoveAt(0); // remove: `.section .data`
+            }
+
+            TextSection.RemoveAt(0); // remove: `.section .text`
+            if (TextSection.Count > 1 && TextSection[0].Item2 == ".globl main" && TextSection[1].Item2 == "main:")
+                TextSection.RemoveAt(0);
+            else
+                Shartilities.Log(Shartilities.LogType.ERROR, $"main is not defined in the assembly program\n", 1);
+
+            return (TextSection, DataSection);
+        }
+        static string ParseLabel(string input)
+        {
+            string label = input.Trim();
+            int ColonIndex = label.IndexOf(':');
+            if (ColonIndex == label.Length - 1)
+            {
+                label = label[..^1].Trim();
+                if (label.Split(' ').Length > 1)
+                {
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid label syntax `{input}`\n", 1);
+                }
+                else
+                {
+                    return label;
                 }
             }
             else
-                curr_text_dir = src;
-
-            if (curr_data_dir.Count > 1)
-                curr_data_dir.RemoveAt(0);
-            curr_text_dir.RemoveAt(0);
-
-            if (curr_text_dir.Count > 0 && curr_text_dir[0] == ".globl main")
-                curr_text_dir.RemoveAt(0);
-            else
-                Shartilities.Log(Shartilities.LogType.ERROR, $"main is not defined in the assembly program\n", 1);
-            return (curr_data_dir, curr_text_dir);
+            {
+                Shartilities.Log(Shartilities.LogType.ERROR, $"the syntax is not supported yet\n");
+            }
+            Shartilities.UNREACHABLE("ParseLabel");
+            return "";
         }
-        public static Program AssembleProgram(string src)
+        public static Program AssembleProgram(string FilePath)
         {
+            string src = File.ReadAllText(FilePath);
+
             List<string> splitted = [.. src.Split('\n')];
             List<int> lines = [.. Enumerable.Range(1, splitted.Count)];
             List<(int, string)> code = [.. lines.Zip(splitted)];
@@ -828,39 +737,108 @@ namespace Assembler
                 code[i] = (code[i].Item1, code[i].Item2.Trim());
             }
 
+            (List<(int, string)> TextSection, List<(int, string)> DataSection) = GetTextDataSections(code);
 
-            foreach ((int, string) inst in code)
+            Program p = new();
+            Dictionary<string, int> Labels = [];
+            int LabelAddress = 0;
+            for (int i = 0; i < TextSection.Count; i++)
             {
-                Console.WriteLine($"line: {inst.Item1} , inst: `{inst.Item2}`");
+                int LineNumber = TextSection[i].Item1;
+                string instruction = TextSection[i].Item2;
+
+                if (instruction.Contains(':'))
+                {
+                    Labels.Add(ParseLabel(instruction), LabelAddress);
+                }
+                else
+                {
+                    LabelAddress += 4;
+                    List<string> tokens = [.. instruction.Split(',')];
+                    string t = tokens[0];
+                    tokens.RemoveAt(0);
+                    tokens.InsertRange(0, [.. t.Split(' ')]);
+                    for (int j = 0; j < tokens.Count; j++) tokens[j] = tokens[j].Trim();
+                    tokens.RemoveAll(x => string.IsNullOrEmpty(x) || string.IsNullOrWhiteSpace(x));
+
+                    if (tokens[^1].Contains('('))
+                    {
+                        t = tokens[^1];
+                        tokens = tokens[..^1];
+                        List<string> ts = [.. t.Split('(', ')')];
+                        for (int j = 0; j < ts.Count; j++) ts[j] = ts[j].Trim();
+                        ts.RemoveAll(x => string.IsNullOrEmpty(x) || string.IsNullOrWhiteSpace(x));
+                        tokens.AddRange(ts);
+                    }
+                    p.Instructions.Add(new(tokens, LineNumber));
+                }
             }
 
+            Dictionary<string, UInt32> DataSectionAddresses = [];
+            UInt32 CurrentDataAddress = 0;
+            for (int i = 0; i < DataSection.Count; i++)
+            {
+                string line = DataSection[i].Item2;
+                if (line.Contains(':'))
+                {
+                    string label = ParseLabel(DataSection[i].Item2);
+                    DataSectionAddresses.Add(label, CurrentDataAddress);
+                }
+                else
+                {
+                    int index = line.IndexOf(' ');
+                    if (index == -1)
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid syntax in data section\n", 1);
+                    string Directive = line[..index];
+                    if (!DataSectionDirectives.ContainsKey(Directive))
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid data section directive `{Directive}`\n", 1);
+                    
+                    List<string> data = [.. line[index..].Trim().Split(',')];
+                    for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
+                    p.DataMemoryValues.Add(Directive);
+                    p.DataMemoryValues.AddRange(data);
+                    if (Directive == ".space")
+                    {
+                        if (data.Count == 0)
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"not expression was provided for .space directive\n", 1);
+                        if (data.Count != 1)
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression was provided for .space directive\n", 1);
 
+                        if (!UInt32.TryParse(data[0], out UInt32 value))
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value `{data[0]}`\n", 1);
+                        CurrentDataAddress += 1 * value;
+                    }
+                    else
+                    {
+                        int? size = DataSectionDirectives[Directive];
+                        if (size.HasValue)
+                            CurrentDataAddress += (UInt32)(size.Value * data.Count);
+                        else
+                            Shartilities.UNREACHABLE($"invalid size in directive `{Directive}`");
+                    }
+                        
+                }
+            }
 
-            //(List<string> data_dir, List<string> text_dir) = Get_directives(src);
-            //curr_data_dir = data_dir;
-            //curr_text_dir = text_dir;
-            //(List<string> DM_INIT1, List<string> DM1, List<KeyValuePair<string, int>> addresses) = assemble_data_dir(curr_data_dir);
-            //List<string> DM_INIT = DM_INIT1;
-            //List<string> DM = DM1;
-            //Assemble(addresses);
+            foreach (KeyValuePair<string, UInt32> address in DataSectionAddresses)
+            {
+                for (int i = 0; i < p.Instructions.Count; i++)
+                {
+                    for (int j = 1; j < p.Instructions[i].m_tokens.Count; j++)
+                        if (p.Instructions[i].m_tokens[j] == address.Key)
+                        {
+                            p.Instructions[i].m_tokens[j] = address.Value.ToString();
+                        }
+                }
+            }
 
-
-            //foreach (KeyValuePair<string, int> address in addresses)
-            //{
-            //    for (int i = 0; i < curr_text_dir.Count; i++)
-            //    {
-            //        curr_text_dir[i] = Replace(curr_text_dir[i], $@"\b{Escape(address.Key)}\b", address.Value.ToString());
-            //    }
-            //}
-            //Assembler.Assembler assembler = new();
-            //Assembler.Program program = assembler.AssembleProgram(curr_text_dir);
-            //m_prog = program;
-            //curr_insts = GetInstsAsText(m_prog);
-
-
-            //p.Add("HLT");
-            Shartilities.TODO("AssembleProgram");
-            return new();
+            for (int i = 0; i < p.Instructions.Count; i++)
+            {
+                p.MachineCodes.AddRange(Instruction2MachineCodes(p.Instructions[i]));
+            }
+            // TODO:
+            //      - curr_insts = GetInstsAsText(m_prog);
+            return p;
         }
         static int LineNumber([System.Runtime.CompilerServices.CallerLineNumber] int LineNumber = 0)
         {
