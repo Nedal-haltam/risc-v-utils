@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using static System.Text.RegularExpressions.Regex;
 
 namespace Assembler
@@ -237,11 +238,22 @@ namespace Assembler
                         imm = GetImmediate(imm).Substring(31 - 11, 12);
                         return GetItypeInst(mnem, imm, rs1, rd);
                     }
+                case "li":
+                    {
+                        // li rd,immediate
+                        // x[rd] = SignExtended(immediate)
+                        // TODO: fix and implement it using the Myriad sequences
+                        Check(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string imm = ts[2];
+                        imm = GetImmediate(imm).Substring(31 - 11, 12);
+                        return GetItypeInst("addi", imm, GetRegisterIndex("zero"), rd);
+                    }
                 case "nop":
                     {
                         // nop
                         // nothing
-                        return GetItypeInst("addi", "".PadLeft(12, '0'), "00000", "00000");
+                        return GetItypeInst("addi", "".PadLeft(12, '0'), GetRegisterIndex("zero"), GetRegisterIndex("zero"));
                     }
                 case "mv":
                     {
@@ -403,6 +415,17 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[3]);
                         return GetRtypeInst(mnem, rs1, rs2, rd);
                     }
+                case "sgt":
+                    {
+                        // sgt rd,rs1,rs2
+                        // x[rd] = x[rs1] >s x[rs2]
+                        // x[rd] = (signed(x[rs1]) > signed(x[rs2])) ? 1 : 0
+                        Check(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
+                        return GetRtypeInst("slt", rs2, rs1, rd); // flipped the operands
+                    }
                 case "sltu":
                     {
                         // sltu rd,rs1,rs2
@@ -472,7 +495,7 @@ namespace Assembler
                     {
                         // ecall
                         // RaiseException(EnvironmentCall)
-                        return GetItypeInst(mnem, "".PadLeft(12, '0'), "00000", "00000");
+                        return GetItypeInst(mnem, "".PadLeft(12, '0'), GetRegisterIndex("zero"), GetRegisterIndex("zero"));
                     }
                 case "lb":
                     {
@@ -535,6 +558,7 @@ namespace Assembler
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][7:0]
                         // NOTE: Store 8-bit, values from the
                         // ```low bits of register rs2 to memory.```
+                        Check(mnem, ts.Count, 4);
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
@@ -547,6 +571,7 @@ namespace Assembler
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][15:0]
                         // NOTE: Store 16-bit, values from the
                         // ```low bits of register rs2 to memory.```
+                        Check(mnem, ts.Count, 4);
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
@@ -557,6 +582,7 @@ namespace Assembler
                     {
                         // sw rs2,offset(rs1)
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][31:0]
+                        Check(mnem, ts.Count, 4);
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         string rs1 = GetRegisterIndex(ts[3]);
@@ -567,12 +593,37 @@ namespace Assembler
                     {
                         // jal rd,offset
                         // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
+                        Check(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         offset = GetImmediate(offset).Substring(31 - 20, 20); // offset = offset[20:1]
                         // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
                         //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
                         return GetUtypeInst(mnem, offset, rd);
+                    }
+                case "call":
+                    {
+                        // call offset
+                        // pc += SignExtended(offset)
+                        // call offset -> jal ra,offset
+                        Check(mnem, ts.Count, 2);
+                        string offset = GetImmediate(ts[1]);
+                        offset = GetImmediate(offset).Substring(31 - 20, 20); // offset = offset[20:1]
+                        // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
+                        //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
+                        return GetUtypeInst("jal", offset, GetRegisterIndex("ra"));
+                    }
+                case "j":
+                    {
+                        // j label
+                        // pc = label === pc = pc + (label - pc) = pc + (offset)
+                        // j offset -> jal x0,offset
+                        Check(mnem, ts.Count, 2);
+                        string offset = ts[1];
+                        offset = GetImmediate(offset).Substring(31 - 20, 20); // offset = offset[20:1]
+                        // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
+                        //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
+                        return GetUtypeInst("jal", offset, GetRegisterIndex("zero"));
                     }
                 case "jalr":
                     {
@@ -582,11 +633,28 @@ namespace Assembler
                         // x[rd] = t
                         // NOTE: the steps above are important and should be implemented exactly as shown
                         // ofcourse they are gonna be executed in parallel in hardware but should be taken into account when performing the operation
+                        Check(mnem, ts.Count, 4);
                         string rd = ts[1];
                         string rs1 = ts[2];
                         string offset = ts[3];
                         offset = GetImmediate(offset).Substring(31 - 11, 12);
                         return GetItypeInst(mnem, offset, rs1, rd);
+                    }
+                case "ret":
+                    {
+                        // ret
+                        // pc = ra
+                        Check(mnem, ts.Count, 1);
+                        return GetItypeInst("jalr", "".PadLeft(12, '0'), GetRegisterIndex("ra"), GetRegisterIndex("zero"));
+                    }
+                case "jr":
+                    {
+                        // jr rs1
+                        // pc = x[rs1]
+                        // jr rs1 -> jalr x0,rs1,0
+                        Check(mnem, ts.Count, 2);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        return GetItypeInst("jalr", "".PadLeft(12, '0'), rs1, GetRegisterIndex("zero"));
                     }
                 default:
                     {
