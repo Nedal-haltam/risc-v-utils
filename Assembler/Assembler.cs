@@ -40,8 +40,9 @@ namespace Assembler
     {
         static readonly Dictionary<string, int?> DataSectionDirectives = new()
         {
-            {".word"  , 4},
-            {".space" , null},
+            {".word"   , 4},
+            {".space"  , null},
+            {".string" , 1},
         };
         static readonly Dictionary<string, int> REG_LIST = new()
         {
@@ -912,12 +913,12 @@ namespace Assembler
                     if (!DataSectionDirectives.ContainsKey(Directive))
                         Shartilities.Log(Shartilities.LogType.ERROR, $"invalid data section directive `{Directive}`\n", 1);
                     
-                    List<string> data = [.. line[index..].Trim().Split(',')];
-                    for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
-                    p.DataMemoryValues.Add(Directive);
-                    p.DataMemoryValues.AddRange(data);
                     if (Directive == ".space")
                     {
+                        List<string> data = [.. line[index..].Trim().Split(',')];
+                        for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
+                        p.DataMemoryValues.Add(Directive);
+                        p.DataMemoryValues.AddRange(data);
                         if (data.Count == 0)
                             Shartilities.Log(Shartilities.LogType.ERROR, $"not expression was provided for .space directive\n", 1);
                         if (data.Count != 1)
@@ -927,8 +928,50 @@ namespace Assembler
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value `{data[0]}`\n", 1);
                         CurrentDataAddress += 1 * value;
                     }
+                    else if (Directive == ".string")
+                    {
+                        string StringLit = line[index..].Trim();
+                        if (StringLit.Length > 1 && StringLit[0] == '"' && StringLit[^1] == '"')
+                        {
+                            p.DataMemoryValues.Add(Directive);
+                            i = 1;
+                            while (i < StringLit.Length - 1)
+                            {
+                                char c = StringLit[i];
+                                if (c == '\\')
+                                {
+                                    if (i + 1 < StringLit.Length - 1)
+                                    {
+                                        if (StringLit[i + 1] == 'n')
+                                        {
+                                            p.DataMemoryValues.Add("\n");
+                                            i++;
+                                            i++;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid escaping in string literal `{StringLit}`\n", 1);
+                                    }
+                                }
+                                else
+                                {
+                                    p.DataMemoryValues.Add($"{c}");
+                                    i++;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid string literal declaration: `{StringLit}`\n", 1);
+                        }
+                    }
                     else
                     {
+                        List<string> data = [.. line[index..].Trim().Split(',')];
+                        for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
+                        p.DataMemoryValues.Add(Directive);
+                        p.DataMemoryValues.AddRange(data);
                         int? size = DataSectionDirectives[Directive];
                         if (size.HasValue)
                             CurrentDataAddress += (UInt32)(size.Value * data.Count);
