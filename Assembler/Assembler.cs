@@ -611,7 +611,7 @@ namespace Assembler
                         // pc += SignExtended(offset)
                         // call offset -> jal ra,offset
                         Check(mnem, ts.Count, 2);
-                        string offset = GetImmediate(ts[1]);
+                        string offset = ts[1];
                         offset = GetImmediate(offset).Substring(31 - 20, 20); // offset = offset[20:1]
                         // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
                         //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
