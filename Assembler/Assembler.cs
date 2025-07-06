@@ -112,6 +112,10 @@ namespace Assembler
             {"sb"    , new("0100011", "000", "")},
             {"sh"    , new("0100011", "001", "")},
             {"sw"    , new("0100011", "010", "")},
+            {"beq"   , new("1100011", "000", "")},
+            {"bne"   , new("1100011", "001", "")},
+            {"blt"   , new("1100011", "100", "")},
+            {"bge"   , new("1100011", "101", "")},
             // R-Type
             {"add"   , new("0110011", "000", "0000000")},
             {"sub"   , new("0110011", "000", "0110000")},
@@ -655,6 +659,71 @@ namespace Assembler
                         Check(mnem, ts.Count, 2);
                         string rs1 = GetRegisterIndex(ts[1]);
                         return GetItypeInst("jalr", "".PadLeft(12, '0'), rs1, GetRegisterIndex("zero"));
+                    }
+                case "beq":
+                    {
+                        // beq rs1,rs2,offset
+                        // if (rs1 == rs2) pc += SignExtended(offset)
+                        Check(mnem, ts.Count, 4);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[2]);
+                        string offset = ts[3];
+                        offset = GetImmediate(offset).Substring(31 - 12, 12);
+                        // TODO: see the immediate index for all the branch instruction formats
+                        return GetStypeInst(mnem, offset, rs1, rs2);
+                    }
+                case "bne":
+                    {
+                        // bne rs1,rs2,offset
+                        // if (rs1 != rs2) pc += SignExtended(offset)
+                        Check(mnem, ts.Count, 4);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[2]);
+                        string offset = ts[3];
+                        offset = GetImmediate(offset).Substring(31 - 12, 12);
+                        return GetStypeInst(mnem, offset, rs1, rs2);
+                    }
+                case "blt":
+                    {
+                        // blt rs1,rs2,offset
+                        // if (rs1 <s rs2) pc += SignExtended(offset)
+                        // if (signed(rs1) <s signed(rs2)) pc += SignExtended(offset)
+                        Check(mnem, ts.Count, 4);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[2]);
+                        string offset = ts[3];
+                        offset = GetImmediate(offset).Substring(31 - 12, 12);
+                        return GetStypeInst(mnem, offset, rs1, rs2);
+                    }
+                case "bltz":
+                    {
+                        // bltz rs1,offset
+                        Check(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        offset = GetImmediate(offset).Substring(31 - 12, 12);
+                        return GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero"));
+                    }
+                case "bge":
+                    {
+                        // bge rs1,rs2,offset
+                        // if (rs1 >=s rs2) pc += SignExtended(offset)
+                        // if (signed(rs1) >=s signed(rs2)) pc += SignExtended(offset)
+                        Check(mnem, ts.Count, 4);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[2]);
+                        string offset = ts[3];
+                        offset = GetImmediate(offset).Substring(31 - 12, 12);
+                        return GetStypeInst(mnem, offset, rs1, rs2);
+                    }
+                case "bgez":
+                    {
+                        // bgez rs1,offset
+                        Check(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        offset = GetImmediate(offset).Substring(31 - 12, 12);
+                        return GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero"));
                     }
                 default:
                     {
