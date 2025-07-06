@@ -634,8 +634,8 @@ namespace Assembler
                         // NOTE: the steps above are important and should be implemented exactly as shown
                         // ofcourse they are gonna be executed in parallel in hardware but should be taken into account when performing the operation
                         Check(mnem, ts.Count, 4);
-                        string rd = ts[1];
-                        string rs1 = ts[2];
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
                         string offset = ts[3];
                         offset = GetImmediate(offset).Substring(31 - 11, 12);
                         return GetItypeInst(mnem, offset, rs1, rd);
