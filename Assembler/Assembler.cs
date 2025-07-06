@@ -38,12 +38,6 @@ namespace Assembler
 
     public static class Assembler
     {
-        static readonly Dictionary<string, int?> DataSectionDirectives = new()
-        {
-            {".word"   , 4},
-            {".space"  , null},
-            {".string" , 1},
-        };
         static readonly Dictionary<string, int> REG_LIST = new()
         {
             {"zero", 0},
@@ -180,7 +174,7 @@ namespace Assembler
                 return "";
             }
         }
-        static string GetImmediate(string imm)
+        public static string GetImmediate(string imm)
         {
             if (imm.StartsWith("0x"))
             {
@@ -856,13 +850,11 @@ namespace Assembler
         }
         static uint GetInstructionSize(string mnem)
         {
-            switch (mnem)
+            return mnem switch
             {
-                case "la":
-                    return 8;
-                default:
-                    return 4;
-            }
+                "la" => 8,
+                _ => 4,
+            };
         }
         public static Program AssembleProgram(string FilePath)
         {
@@ -876,7 +868,7 @@ namespace Assembler
             {
                 int index = code[i].Item2.IndexOf('#');
                 if (index != -1)
-                    code[i] = (code[i].Item1, code[i].Item2.Remove(index));
+                    code[i] = (code[i].Item1, code[i].Item2[..index]);
             }
             code.RemoveAll(x => string.IsNullOrEmpty(x.Item2) || string.IsNullOrWhiteSpace(x.Item2));
             for (int i = 0; i < code.Count; i++)
@@ -936,10 +928,8 @@ namespace Assembler
                     int index = line.IndexOf(' ');
                     if (index == -1)
                         Shartilities.Log(Shartilities.LogType.ERROR, $"invalid syntax in data section\n", 1);
+
                     string Directive = line[..index];
-                    if (!DataSectionDirectives.ContainsKey(Directive))
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid data section directive `{Directive}`\n", 1);
-                    
                     if (Directive == ".space")
                     {
                         List<string> data = [.. line[index..].Trim().Split(',')];
@@ -947,9 +937,9 @@ namespace Assembler
                         p.DataMemoryValues.Add(Directive);
                         p.DataMemoryValues.AddRange(data);
                         if (data.Count == 0)
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"not expression was provided for .space directive\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"no expression was provided for .space directive\n", 1);
                         if (data.Count != 1)
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression was provided for .space directive\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid number of expressions should be one for .space directive\n", 1);
 
                         if (!UInt32.TryParse(data[0], out UInt32 value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value `{data[0]}`\n", 1);
@@ -962,6 +952,8 @@ namespace Assembler
                         {
                             p.DataMemoryValues.Add(Directive);
                             i = 1;
+                            int len = 0;
+                            List<string> temp = [];
                             while (i < StringLit.Length - 1)
                             {
                                 char c = StringLit[i];
@@ -971,39 +963,43 @@ namespace Assembler
                                     {
                                         if (StringLit[i + 1] == 'n')
                                         {
-                                            p.DataMemoryValues.Add("\n");
+                                            temp.Add("\n");
                                             i++;
                                             i++;
                                         }
                                     }
                                     else
                                     {
-                                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid escaping in string literal `{StringLit}`\n", 1);
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported escape character in string literal `{StringLit}`\n", 1);
                                     }
                                 }
                                 else
                                 {
-                                    p.DataMemoryValues.Add($"{c}");
+                                    temp.Add($"{c}");
                                     i++;
                                 }
+                                len++;
                             }
+                            p.DataMemoryValues.Add(len.ToString());
+                            p.DataMemoryValues.AddRange(temp);
                         }
                         else
                         {
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid string literal declaration: `{StringLit}`\n", 1);
                         }
                     }
-                    else
+                    else if (Directive == ".word")
                     {
                         List<string> data = [.. line[index..].Trim().Split(',')];
                         for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
                         p.DataMemoryValues.Add(Directive);
                         p.DataMemoryValues.AddRange(data);
-                        int? size = DataSectionDirectives[Directive];
-                        if (size.HasValue)
-                            CurrentDataAddress += (UInt32)(size.Value * data.Count);
-                        else
-                            Shartilities.UNREACHABLE($"invalid size in directive `{Directive}`");
+                        int size = 4;
+                        CurrentDataAddress += (UInt32)(size * data.Count);
+                    }
+                    else
+                    {
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported data memory directive `{Directive}`\n", 1);
                     }
                 }
             }
