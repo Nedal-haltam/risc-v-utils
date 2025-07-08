@@ -3,6 +3,86 @@ using System.Text;
 
 public static class LibUtils
 {
+    public static readonly Dictionary<string, int> REG_LIST = new()
+    {
+        {"zero", 0},
+        {"ra"  , 1},
+        {"sp"  , 2},
+        {"gp"  , 3},
+        {"tp"  , 4},
+        {"t0"  , 5},
+        {"at"  , 5},
+        {"t1"  , 6},
+        {"t2"  , 7},
+        {"s0"  , 8},
+        {"s1"  , 9},
+        {"a0"  , 10},
+        {"a1"  , 11},
+        {"a2"  , 12},
+        {"a3"  , 13},
+        {"a4"  , 14},
+        {"a5"  , 15},
+        {"a6"  , 16},
+        {"a7"  , 17},
+        {"s2"  , 18},
+        {"s3"  , 19},
+        {"s4"  , 20},
+        {"s5"  , 21},
+        {"s6"  , 22},
+        {"s7"  , 23},
+        {"s8"  , 24},
+        {"s9"  , 25},
+        {"s10" , 26},
+        {"s11" , 27},
+        {"t3"  , 28},
+        {"t4"  , 29},
+        {"t5"  , 30},
+        {"t6"  , 31},
+    };
+    public readonly static Dictionary<string, InstInfo> Infos = new()
+    {
+        // R-Type
+        {"add"   , new("0110011", "000", "0000000")},
+        {"sub"   , new("0110011", "000", "0110000")},
+        {"sll"   , new("0110011", "001", "0000000")},
+        {"slt"   , new("0110011", "010", "0000000")},
+        {"sltu"  , new("0110011", "011", "0000000")},
+        {"xor"   , new("0110011", "100", "0000000")},
+        {"srl"   , new("0110011", "101", "0000000")},
+        {"sra"   , new("0110011", "101", "0100000")},
+        {"or"    , new("0110011", "110", "0000000")},
+        {"and"   , new("0110011", "111", "0000000")},
+        // I-Type
+        {"addi"  , new("0010011", "000", "")},
+        {"slti"  , new("0010011", "010", "")},
+        {"sltiu" , new("0010011", "011", "")},
+        {"xori"  , new("0010011", "100", "")},
+        {"ori"   , new("0010011", "110", "")},
+        {"andi"  , new("0010011", "111", "")},
+        {"slli"  , new("0010011", "001", "")},
+        {"srli"  , new("0010011", "101", "")},
+        {"srai"  , new("0010011", "101", "")},
+        {"ecall" , new("1110011", "000", "")},
+        {"lb"    , new("0000011", "000", "")},
+        {"lh"    , new("0000011", "001", "")},
+        {"lw"    , new("0000011", "010", "")},
+        {"lbu"   , new("0000011", "100", "")},
+        {"lhu"   , new("0000011", "101", "")},
+        {"jalr"  , new("1110111", "000", "")},
+        // S-Type
+        {"sb"    , new("0100011", "000", "")},
+        {"sh"    , new("0100011", "001", "")},
+        {"sw"    , new("0100011", "010", "")},
+        {"beq"   , new("1100011", "000", "")},
+        {"bne"   , new("1100011", "001", "")},
+        {"blt"   , new("1100011", "100", "")},
+        {"bge"   , new("1100011", "101", "")},
+        // U-Type
+        {"lui"   , new("0110111", "", "")},
+        {"auipc" , new("0010111", "", "")},
+        {"jal"   , new("1111111", "", "")},
+    };
+
     public struct Instruction
     {
         public List<string> m_tokens;
@@ -163,7 +243,7 @@ public static class LibUtils
         }
         return sb;
     }
-    public static string GetFromIndexLittle(string NameofStringVariable, string str, int to, int from)
+    public static string GetFromIndexLittle(string str, int to, int from)
     {
         int len = to - from + 1;
         try
@@ -172,7 +252,7 @@ public static class LibUtils
         }
         catch
         {
-            Shartilities.Log(Shartilities.LogType.ERROR, $"could not index `{NameofStringVariable}`\n", 1);
+            Shartilities.Log(Shartilities.LogType.ERROR, $"could not index `{str}`\n", 1);
         }
         Shartilities.UNREACHABLE("GetFromIndexLittle");
         return "";
