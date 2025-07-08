@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LibUtil\LibUtils.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Shartilities">
       <HintPath>..\..\Shartilities\bin\Debug\net8.0\Shartilities.dll</HintPath>
     </Reference>
