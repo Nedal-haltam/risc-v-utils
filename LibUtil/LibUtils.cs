@@ -1,10 +1,66 @@
-﻿using Assembler;
+﻿using System.Globalization;
 using System.Text;
 
 namespace LibUtils
 {
     public static class LibUtils
     {
+        public struct Instruction
+        {
+            public List<string> m_tokens;
+            public int m_line;
+            public Instruction()
+            {
+                m_line = -1;
+                m_tokens = [];
+            }
+            public Instruction(List<string> tokens, int line)
+            {
+                m_tokens = tokens;
+                m_line = line;
+            }
+        }
+        public struct Program
+        {
+            public List<Instruction> Instructions;
+            public List<string> DataMemoryValues;
+            public List<string> MachineCodes;
+            public Program()
+            {
+                Instructions = [];
+                MachineCodes = [];
+                DataMemoryValues = [];
+            }
+        }
+        public struct InstInfo(string Opcode, string Funct3, string Funct7)
+        {
+            public string Opcode = Opcode;
+            public string Funct3 = Funct3;
+            public string Funct7 = Funct7;
+        }
+        // make it into two separate functions
+        // 1- string imm -> number literal
+        // 2- number literal -> binary string
+        public static string GetImmediateToBin(string imm)
+        {
+            if (imm.StartsWith("0x"))
+            {
+                imm = imm[2..];
+                if (UInt32.TryParse(imm, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out UInt32 value))
+                    return Convert.ToString(value, 2).PadLeft(32, '0');
+                Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+            }
+            else
+            {
+                if (UInt32.TryParse(imm, out UInt32 UnsignedValue))
+                    return Convert.ToString(UnsignedValue, 2).PadLeft(32, '0');
+                else if (Int32.TryParse(imm, out Int32 SignedValue))
+                    return Convert.ToString(SignedValue, 2).PadLeft(32, '0');
+                Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+            }
+            Shartilities.UNREACHABLE("GetImmediate");
+            return "BogusAmogus";
+        }
         public static List<string> GetIM_INIT(List<string> MachinceCodes, List<Instruction> Instructions)
         {
             Shartilities.TODO("GetIM_INIT is not implemented");
@@ -39,7 +95,7 @@ namespace LibUtils
                     if (Directive == ".space")
                     {
                         i++;
-                        if (!uint.TryParse(Assembler.Assembler.GetImmediate(DataMemoryValues[i]), out uint count))
+                        if (!uint.TryParse(DataMemoryValues[i], out uint count))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate `{DataMemoryValues[i]}`\n", 1);
                         for (int j = 0; j < count; j++) DM_Bytes.Add("0");
                     }
@@ -72,36 +128,24 @@ namespace LibUtils
             }
             return DM_Bytes;
         }
-        public static void print_regs(List<int> regs)
+        public static void print_regs(List<string> regs)
         {
-            Console.Write("Register file content : \n");
-            int i = 0;
-            foreach (int n in regs)
-            {
-                string temp = $"index = {i++,10} , reg_out : signed = {n,10} , unsigned = {(uint)n,10}\n";
-                Console.Write(temp);
-            }
+            Console.Write(get_regs(regs).ToString());
         }
         public static void print_DM(List<string> DM)
         {
-            Console.Write("Data Memory Content : \n");
-            int i = 0;
-            foreach (string mem in DM)
-            {
-                string temp;
-                temp = $"Mem[{i++,4}] = {mem,11}\n";
-
-                Console.Write(temp);
-            }
+            Console.Write(GetDM(DM).ToString());
         }
-        public static StringBuilder get_regs(List<int> regs)
+        public static StringBuilder get_regs(List<string> regs)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append("Register file content : \n");
             int i = 0;
-            foreach (int n in regs)
+            foreach (string n in regs)
             {
-                string temp = $"index = {i++,10} , reg_out : signed = {n,11} , unsigned = {(uint)n,10}\n";
+                Int32 signed = Int32.Parse(n);
+                UInt32 unsigned = UInt32.Parse(n);
+                string temp = $"index = {i++,10} , reg_out : signed = {signed,10} , unsigned = {unsigned,10}\n";
                 sb.Append(temp);
             }
             return sb;
@@ -120,6 +164,20 @@ namespace LibUtils
                 sb.Append(temp);
             }
             return sb;
+        }
+        public static string GetFromIndexLittle(string NameofStringVariable, string str, int to, int from)
+        {
+            int len = to - from + 1;
+            try
+            {
+                return str.Substring(str.Length - to - 1, len);
+            }
+            catch
+            {
+                Shartilities.Log(Shartilities.LogType.ERROR, $"could not index `{NameofStringVariable}`\n", 1);
+            }
+            Shartilities.UNREACHABLE("GetFromIndexLittle");
+            return "";
         }
     }
 }
