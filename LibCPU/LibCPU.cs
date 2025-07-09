@@ -32,7 +32,6 @@ namespace LibCPU
     public static class SingleCycle
     {
         const int MAX_CLOCKS = 100 * 1000 * 1000;
-        const string nop = "00000000000000000000000000000000";
 
         static List<string> InstructionMemory = [];
         static RegisterFile RegisterFile = new();
@@ -258,8 +257,8 @@ namespace LibCPU
                     }
                 case "011":
                     {
-                        int imm = Convert.ToInt32(imm12.PadLeft(32, '0'), 2);
-                        RegisterFile[rd] = RegisterFile[rs1] < imm ? 1 : 0;
+                        int imm = Convert.ToInt32(imm12.PadLeft(32, imm12[0]), 2);
+                        RegisterFile[rd] = (uint)RegisterFile[rs1] < (uint)imm ? 1 : 0;
                         PC += 4;
                         break;
                     }
@@ -425,7 +424,7 @@ namespace LibCPU
                         (int rs1, string imm12, int rd) = GetItypeInst(mc);
                         int t = PC + 4;
                         int imm = Convert.ToInt32(imm12.PadLeft(32, imm12[0]), 2);
-                        PC = RegisterFile[rs1] + imm & ~1;
+                        PC = RegisterFile[rs1] + (imm & ~1);
                         RegisterFile[rd] = t;
                         break;
                     }
