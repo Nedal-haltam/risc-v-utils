@@ -32,11 +32,10 @@ namespace LibCPU
     public static class SingleCycle
     {
         const int MAX_CLOCKS = 100 * 1000 * 1000;
-
         static List<string> InstructionMemory = [];
         static RegisterFile RegisterFile = new();
         static List<string> DataMemory = [];
-
+        static string? OutputFilePath;
         static int PC = 0;
         static int CyclesConsumed = 0;
 
@@ -373,6 +372,8 @@ namespace LibCPU
                         else if (syscall == 93)
                         {
                             int ExitCode = RegisterFile[LibUtils.REG_LIST["a0"]];
+                            if (OutputFilePath != null)
+                                GenerateRegFileDMStates(OutputFilePath);
                             Environment.Exit(ExitCode);
                         }
                         else
@@ -532,10 +533,11 @@ namespace LibCPU
                 // end of U-TYPE instructions
             }
         }
-        public static (int, List<string>, List<string>) Run(List<string> MachingCodes, List<string> DataMemoryInit, uint IM_SIZE, uint DM_SIZE)
+        public static void Run(List<string> MachingCodes, List<string> DataMemoryInit, uint IM_SIZE, uint DM_SIZE, string? inputOutputFilePath = null)
         {
             PC = 0;
             CyclesConsumed = 0;
+            OutputFilePath = inputOutputFilePath;
 
             InstructionMemory = [];
             foreach (string code in MachingCodes)
@@ -558,15 +560,26 @@ namespace LibCPU
 
             while (CyclesConsumed < 50)
             {
+                CyclesConsumed++;
                 string mc = InstructionMemory[PC + 3] + InstructionMemory[PC + 2] + InstructionMemory[PC + 1] + InstructionMemory[PC];
                 ConsumeInstruction(mc);
-                CyclesConsumed++;
             }
             if (CyclesConsumed == MAX_CLOCKS)
             {
                 Shartilities.Log(Shartilities.LogType.ERROR, $"cycles consumed reached the limit\n", 1);
             }
-            return (CyclesConsumed, RegisterFile.Registers, DataMemory);
+        }
+        static void GenerateRegFileDMStates(string OutPutFilePath)
+        {
+            if (OutPutFilePath != null)
+            {
+                StringBuilder sb = new();
+                sb.Append(LibUtils.GetRegs(RegisterFile.Registers));
+                sb.Append(LibUtils.GetDM(DataMemory));
+                sb.Append($"Number of cycles consumed : {CyclesConsumed,10}\n");
+                File.WriteAllText(OutPutFilePath, sb.ToString());
+                Shartilities.Log(Shartilities.LogType.INFO, $"Generated CAS output of singlecyle in path {OutPutFilePath} successfully\n");
+            }
         }
     }
 }
