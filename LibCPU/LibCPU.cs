@@ -88,12 +88,14 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("add");
+                                    RegisterFile[rd] = RegisterFile[rs1] + RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             case "0110000":
                                 {
-                                    Shartilities.TODO("sub");
+                                    RegisterFile[rd] = RegisterFile[rs1] - RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -110,7 +112,8 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("sll");
+                                    RegisterFile[rd] = RegisterFile[rs1] << (RegisterFile[rs2] & 0x0000001F);
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -127,7 +130,8 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("slt");
+                                    RegisterFile[rd] = RegisterFile[rs1] < RegisterFile[rs2] ? 1 : 0;
+                                    PC += 4;
                                     break;
                                 }
                             default:
