@@ -99,7 +99,8 @@ namespace LibCPU
                                 }
                             case "0000001":
                                 {
-                                    Shartilities.TODO("mul");
+                                    RegisterFile[rd] = RegisterFile[rs1] * RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -116,7 +117,7 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] << (RegisterFile[rs2] & 0x0000001F);
+                                    RegisterFile[rd] = RegisterFile[rs1] << ((int)RegisterFile[rs2] & 0x1F);
                                     PC += 4;
                                     break;
                                 }
@@ -140,12 +141,14 @@ namespace LibCPU
                                 }
                             case "0000001":
                                 {
-                                    Shartilities.TODO("seq");
+                                    RegisterFile[rd] = RegisterFile[rs1] == RegisterFile[rs2] ? 1 : 0;
+                                    PC += 4;
                                     break;
                                 }
                             case "0000010":
                                 {
-                                    Shartilities.TODO("sne");
+                                    RegisterFile[rd] = RegisterFile[rs1] != RegisterFile[rs2] ? 1 : 0;
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -162,7 +165,8 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("sltu");
+                                    RegisterFile[rd] = (UInt64)RegisterFile[rs1] < (UInt64)RegisterFile[rs2] ? 1 : 0;
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -179,12 +183,16 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("xor");
+                                    RegisterFile[rd] = RegisterFile[rs1] ^ RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             case "0000001":
                                 {
-                                    Shartilities.TODO("div");
+                                    if (RegisterFile[rs2] == 0)
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"divide by zero exception\n", 1);
+                                    RegisterFile[rd] = RegisterFile[rs1] / RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -201,12 +209,14 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("srl");
+                                    RegisterFile[rd] = RegisterFile[rs1] >>> ((int)RegisterFile[rs2] & 0x1F);
+                                    PC += 4;
                                     break;
                                 }
                             case "0100000":
                                 {
-                                    Shartilities.TODO("sra");
+                                    RegisterFile[rd] = RegisterFile[rs1] >> ((int)RegisterFile[rs2] & 0x1F);
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -223,12 +233,14 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("or");
+                                    RegisterFile[rd] = RegisterFile[rs1] | RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             case "0000001":
                                 {
-                                    Shartilities.TODO("rem");
+                                    RegisterFile[rd] = RegisterFile[rs1] % RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -245,7 +257,8 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Shartilities.TODO("and");
+                                    RegisterFile[rd] = RegisterFile[rs1] & RegisterFile[rs2];
+                                    PC += 4;
                                     break;
                                 }
                             default:
