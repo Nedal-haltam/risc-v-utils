@@ -97,7 +97,7 @@ namespace Assembler
                 return "";
             }
         }
-        static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction");
+        static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction number of tokens is not {want}");
         static List<string> Instruction2MachineCodes(Instruction inst)
         {
             // references:
@@ -334,6 +334,44 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[3]);
                         return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
+                case "seq":
+                    {
+                        // seq rd,rs1,rs2
+                        // x[rd] = x[rs1] == x[rs2]
+                        // x[rd] = (x[rs1] == x[rs2]) ? 1 : 0
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "sne":
+                    {
+                        // sne rd,rs1,rs2
+                        // x[rd] = x[rs1] != x[rs2]
+                        // x[rd] = (x[rs1] != x[rs2]) ? 1 : 0
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "snez":
+                    {
+                        // snez rd,rs1
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        return [GetRtypeInst("sne", rs1, GetRegisterIndex("zero"), rd)];
+                    }
+                case "seqz":
+                    {
+                        // snez rd,rs1
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        return [GetRtypeInst("seq", rs1, GetRegisterIndex("zero"), rd)];
+                    }
                 case "sgt":
                     {
                         // sgt rd,rs1,rs2
@@ -449,6 +487,17 @@ namespace Assembler
                         offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 11, 0);
                         return [GetItypeInst(mnem, offset, rs1, rd)];
                     }
+                case "ld":
+                    {
+                        // ld rd,offset(rs1)
+                        // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][63:0])
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 11, 0);
+                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                    }
                 case "lbu":
                     {
                         // lbu rd,offset(rs1)
@@ -501,6 +550,17 @@ namespace Assembler
                     {
                         // sw rs2,offset(rs1)
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][31:0]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rs2 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        string rs1 = GetRegisterIndex(ts[3]);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 11, 0);
+                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                    }
+                case "sd":
+                    {
+                        // sd rs2,offset(rs1)
+                        // M[x[rs1] + SignExtended(offset)] = x[rs2][63:0]
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rs2 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
@@ -583,9 +643,19 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1]);
                         string rs2 = GetRegisterIndex(ts[2]);
                         string offset = ts[3];
-                        offset = GetImmediateToBin(offset).Substring(31 - 12, 12);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
                         // TODO: see the immediate index for all the branch instruction formats
                         return [GetStypeInst(mnem, offset, rs1, rs2)];
+                    }
+                case "beqz":
+                    {
+                        // beqz rs1,offset
+                        // if (rs1 == rs2) pc += SignExtended(offset)
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[1]);
+                        string offset = ts[2];
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
+                        return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero"))];
                     }
                 case "bne":
                     {
@@ -595,7 +665,7 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1]);
                         string rs2 = GetRegisterIndex(ts[2]);
                         string offset = ts[3];
-                        offset = GetImmediateToBin(offset).Substring(31 - 12, 12);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "blt":
@@ -607,7 +677,7 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1]);
                         string rs2 = GetRegisterIndex(ts[2]);
                         string offset = ts[3];
-                        offset = GetImmediateToBin(offset).Substring(31 - 12, 12);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "bltz":
@@ -616,7 +686,7 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
-                        offset = GetImmediateToBin(offset).Substring(31 - 12, 12);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
                         return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero"))];
                     }
                 case "bge":
@@ -628,7 +698,7 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1]);
                         string rs2 = GetRegisterIndex(ts[2]);
                         string offset = ts[3];
-                        offset = GetImmediateToBin(offset).Substring(31 - 12, 12);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "bgez":
@@ -637,8 +707,39 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
-                        offset = GetImmediateToBin(offset).Substring(31 - 12, 12);
+                        offset = LibUtils.GetFromIndexLittle(GetImmediateToBin(offset), 12, 1);
                         return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero"))];
+                    }
+                // TODO: 1.50. bltu, 1.51. bgeu
+                case "mul":
+                    {
+                        // mul rd,rs1,rs2
+                        // x[rd] = x[rs1] × x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "rem":
+                    {
+                        // rem rd,rs1,rs2
+                        // x[rd] = x[rs1] %s x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                    }
+                case "div":
+                    {
+                        // div rd,rs1,rs2
+                        // x[rd] = x[rs1] %s x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rs2 = GetRegisterIndex(ts[3]);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
                     }
                 default:
                     {
@@ -827,6 +928,10 @@ namespace Assembler
                     string label = ParseLabel(DataSection[i].Item2);
                     DataSectionAddresses.Add(label, CurrentDataAddress);
                 }
+                else if (line == ".section .bss")
+                {
+                    continue;
+                }
                 else
                 {
                     int index = line.IndexOf(' ');
@@ -855,21 +960,21 @@ namespace Assembler
                         if (StringLit.Length > 1 && StringLit[0] == '"' && StringLit[^1] == '"')
                         {
                             p.DataMemoryValues.Add(Directive);
-                            i = 1;
+                            int j = 1;
                             int len = 0;
                             List<string> temp = [];
-                            while (i < StringLit.Length - 1)
+                            while (j < StringLit.Length - 1)
                             {
-                                char c = StringLit[i];
+                                char c = StringLit[j];
                                 if (c == '\\')
                                 {
-                                    if (i + 1 < StringLit.Length - 1)
+                                    if (j + 1 < StringLit.Length - 1)
                                     {
-                                        if (StringLit[i + 1] == 'n')
+                                        if (StringLit[j + 1] == 'n')
                                         {
                                             temp.Add("\n");
-                                            i++;
-                                            i++;
+                                            j++;
+                                            j++;
                                         }
                                     }
                                     else
@@ -880,7 +985,7 @@ namespace Assembler
                                 else
                                 {
                                     temp.Add($"{c}");
-                                    i++;
+                                    j++;
                                 }
                                 len++;
                             }
