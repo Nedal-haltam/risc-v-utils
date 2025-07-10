@@ -201,7 +201,7 @@ public static class LibUtils
                         else
                             Shartilities.Log(Shartilities.LogType.ERROR, $"no character was provided in string literal\n", 1);
                     }
-                    i += (int)len;
+                    i += (int)len - 1;
                 }
                 else if (Directive == ".word")
                 {
