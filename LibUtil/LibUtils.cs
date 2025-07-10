@@ -123,33 +123,31 @@ public static class LibUtils
         public string Funct3 = Funct3;
         public string Funct7 = Funct7;
     }
-    public static dynamic StringToNumberLiteral(string imm)
+    public static int StringToInt(string imm)
     {
         if (imm.StartsWith("0x"))
         {
             imm = imm[2..];
-            if (UInt32.TryParse(imm, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out UInt32 value))
-                return value;
+            if (uint.TryParse(imm, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint value))
+                return (int)value;
             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate {imm}\n", 1);
         }
         else
         {
-            if (UInt32.TryParse(imm, out UInt32 UnsignedValue))
-                return UnsignedValue;
-            else if (Int32.TryParse(imm, out Int32 SignedValue))
+            if (int.TryParse(imm, out int SignedValue))
                 return SignedValue;
             Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate {imm}\n", 1);
         }
         Shartilities.UNREACHABLE("GetImmediate");
-        return "BogusAmogus";
+        return 0;
     }
-    public static string NumberLiteralToBinaryString(dynamic NumberLiteral)
+    public static string IntToBin(int NumberLiteral)
     {
-        return Convert.ToString(NumberLiteral, 2).PadLeft(32, '0');
+        return Convert.ToString(NumberLiteral, 2).PadLeft(64, '0');
     }
-    public static string GetImmediateToBin(string imm)
+    public static string StringToBin(string imm)
     {
-        return NumberLiteralToBinaryString(StringToNumberLiteral(imm));
+        return IntToBin(StringToInt(imm));
     }
     public static List<string> GetIM_INIT(List<string> MachinceCodes, List<Instruction> Instructions)
     {
