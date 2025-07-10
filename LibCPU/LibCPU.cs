@@ -97,6 +97,11 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
+                            case "0000001":
+                                {
+                                    Shartilities.TODO("mul");
+                                    break;
+                                }
                             default:
                                 {
                                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
@@ -133,6 +138,16 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
+                            case "0000001":
+                                {
+                                    Shartilities.TODO("seq");
+                                    break;
+                                }
+                            case "0000010":
+                                {
+                                    Shartilities.TODO("sne");
+                                    break;
+                                }
                             default:
                                 {
                                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
@@ -165,6 +180,11 @@ namespace LibCPU
                             case "0000000":
                                 {
                                     Shartilities.TODO("xor");
+                                    break;
+                                }
+                            case "0000001":
+                                {
+                                    Shartilities.TODO("div");
                                     break;
                                 }
                             default:
@@ -204,6 +224,11 @@ namespace LibCPU
                             case "0000000":
                                 {
                                     Shartilities.TODO("or");
+                                    break;
+                                }
+                            case "0000001":
+                                {
+                                    Shartilities.TODO("rem");
                                     break;
                                 }
                             default:
@@ -403,6 +428,11 @@ namespace LibCPU
                                     Shartilities.TODO("lw");
                                     break;
                                 }
+                            case "011":
+                                {
+                                    Shartilities.TODO("ld");
+                                    break;
+                                }
                             case "100":
                                 {
                                     Shartilities.TODO("lbu");
@@ -453,6 +483,11 @@ namespace LibCPU
                             case "010":
                                 {
                                     Shartilities.TODO("sw");
+                                    break;
+                                }
+                            case "011":
+                                {
+                                    Shartilities.TODO("sd");
                                     break;
                                 }
                             default:
