@@ -1,15 +1,28 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
+using System.Security.Cryptography;
 using static LibUtils;
 namespace Assembler
 {
     public static class Assembler
     {
+        static bool LOG_INSTRUCTIONS;
         static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
         {
             Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
                 Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
             InstInfo info = Infos[mnem];
+            if (LOG_INSTRUCTIONS)
+            {
+                Console.WriteLine($"{mnem}:");
+                Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
+                Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
+                Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
+                Console.WriteLine($"    {"rs1", -7}: {rs1}");
+                Console.WriteLine($"    {"rs2", -7}: {rs2}");
+                Console.WriteLine($"    {"rd", -7}: {rd}");
+            }
             return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
         }
         static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
@@ -18,6 +31,16 @@ namespace Assembler
             if (!Infos.ContainsKey(mnem))
                 Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
             InstInfo info = Infos[mnem];
+            if (LOG_INSTRUCTIONS)
+            {
+                Console.WriteLine($"{mnem}:");
+                Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
+                Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
+                Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
+                Console.WriteLine($"    {"rs1", -7}: {rs1}");
+                Console.WriteLine($"    {"imm", -7}: {imm12}");
+                Console.WriteLine($"    {"rd", -7}: {rd}");
+            }
             return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
         }
         static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
@@ -26,14 +49,33 @@ namespace Assembler
             if (!Infos.ContainsKey(mnem))
                 Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
             InstInfo info = Infos[mnem];
+            if (LOG_INSTRUCTIONS)
+            {
+                Console.WriteLine($"{mnem}:");
+                Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
+                Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
+                Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
+                Console.WriteLine($"    {"rs1", -7}: {rs1}");
+                Console.WriteLine($"    {"imm", -7}: {imm12}");
+            }
             return LibUtils.GetFromIndexLittle(imm12, 11, 5) + rs2 + rs1 + info.Funct3 + LibUtils.GetFromIndexLittle(imm12, 4, 0) + info.Opcode;
         }
         static string GetUtypeInst(string mnem, string imm20, string rd)
         {
+            InstInfo info = Infos[mnem];
             Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm20={imm20.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
                 Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
-            return imm20 + rd + Infos[mnem].Opcode;
+            if (LOG_INSTRUCTIONS)
+            {
+                Console.WriteLine($"{mnem}:");
+                Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
+                Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
+                Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
+                Console.WriteLine($"    {"imm", -7}: {imm20}");
+                Console.WriteLine($"    {"rd", -7}: {rd}");
+            }
+            return imm20 + rd + info.Opcode;
         }
 
         static string GetRegisterIndex(string reg)
@@ -717,8 +759,9 @@ namespace Assembler
                 _ => 4,
             };
         }
-        public static Program AssembleProgram(string FilePath)
+        public static Program AssembleProgram(string FilePath, bool LOG_INST_FLAG)
         {
+            LOG_INSTRUCTIONS = LOG_INST_FLAG;
             string src = File.ReadAllText(FilePath);
 
             List<string> splitted = [.. src.Split('\n')];
@@ -898,8 +941,6 @@ namespace Assembler
             {
                 p.MachineCodes.AddRange(Instruction2MachineCodes(p.Instructions[i]));
             }
-            // TODO:
-            //      - curr_insts = GetInstsAsText(m_prog);
             return p;
         }
         static int LineNumber([System.Runtime.CompilerServices.CallerLineNumber] int LineNumber = 0)
