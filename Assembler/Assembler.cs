@@ -9,9 +9,9 @@ namespace Assembler
         static bool LOG_INSTRUCTIONS;
         static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
         {
-            Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
+            Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction {mnem}, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
             InstInfo info = Infos[mnem];
             if (LOG_INSTRUCTIONS)
             {
@@ -27,9 +27,9 @@ namespace Assembler
         }
         static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
         {
-            Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rd={rd.Length}");
+            Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rd.Length == 5, $"invalid format in instruction {mnem}, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
             InstInfo info = Infos[mnem];
             if (LOG_INSTRUCTIONS)
             {
@@ -45,9 +45,9 @@ namespace Assembler
         }
         static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
         {
-            Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rs2.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rs2={rs2.Length}");
+            Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rs2.Length == 5, $"invalid format in instruction {mnem}, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rs2={rs2.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
             InstInfo info = Infos[mnem];
             if (LOG_INSTRUCTIONS)
             {
@@ -63,9 +63,9 @@ namespace Assembler
         static string GetUtypeInst(string mnem, string imm20, string rd)
         {
             InstInfo info = Infos[mnem];
-            Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction `{mnem}`, lengths are: imm20={imm20.Length}, rd={rd.Length}");
+            Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction {mnem}, lengths are: imm20={imm20.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction `{mnem}`\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
             if (LOG_INSTRUCTIONS)
             {
                 Console.WriteLine($"{mnem}:");
@@ -93,11 +93,11 @@ namespace Assembler
             }
             else
             {
-                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register `{reg}`\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register {reg}\n", 1);
                 return "";
             }
         }
-        static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid `{mnem}` instruction number of tokens is not {want}");
+        static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid {mnem} instruction number of tokens is not {want}");
         static List<string> Instruction2MachineCodes(Instruction inst)
         {
             // references:
@@ -138,7 +138,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string symbol = ts[2];
                         symbol = GetImmediateToBin(symbol);
-                        //// to account for the sign extension of symbol[11:0] in the `addi` instruction
+                        //// to account for the sign extension of symbol[11:0] in the addi instruction
                         //// TODO: should we handle it in software (easier) or in hardware (not hard)
                         //symbol = Convert.ToString(Convert.ToUInt32(symbol, 2) + (uint)(symbol[20] == '1' ? 1 << 12 : 0), 2).PadLeft(32, '0');
                         return [
@@ -421,7 +421,7 @@ namespace Assembler
                         // sra rd,rs1,rs2
                         // x[rd] = x[rs1] >>s x[rs2]
                         // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
-                        // ```lower 5 bits of register rs2```
+                        // lower 5 bits of register rs2
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
@@ -743,7 +743,7 @@ namespace Assembler
                     }
                 default:
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic `{mnem}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic {mnem}\n", 1);
                         return [];
                     }
             }
@@ -818,10 +818,10 @@ namespace Assembler
                     DataSection = src.GetRange(DataIndex, count);
                     TextSection = src.GetRange(TextIndex, src.Count - count);
                 }
-                DataSection.RemoveAt(0); // remove: `.section .data`
+                DataSection.RemoveAt(0); // remove: .section .data
             }
 
-            TextSection.RemoveAt(0); // remove: `.section .text`
+            TextSection.RemoveAt(0); // remove: .section .text
             if (TextSection.Count > 1 && TextSection[0].Item2 == ".globl main" && TextSection[1].Item2 == "main:")
                 TextSection.RemoveAt(0);
             else
@@ -838,7 +838,7 @@ namespace Assembler
                 label = label[..^1].Trim();
                 if (label.Split(' ').Length > 1)
                 {
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid label syntax `{input}`\n", 1);
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid label syntax {input}\n", 1);
                 }
                 else
                 {
@@ -951,7 +951,7 @@ namespace Assembler
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid number of expressions should be one for .space directive\n", 1);
 
                         if (!UInt32.TryParse(data[0], out UInt32 value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value `{data[0]}`\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value {data[0]}\n", 1);
                         CurrentDataAddress += 1 * value;
                     }
                     else if (Directive == ".string")
@@ -979,7 +979,7 @@ namespace Assembler
                                     }
                                     else
                                     {
-                                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported escape character in string literal `{StringLit}`\n", 1);
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported escape character in string literal {StringLit}\n", 1);
                                     }
                                 }
                                 else
@@ -994,7 +994,7 @@ namespace Assembler
                         }
                         else
                         {
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid string literal declaration: `{StringLit}`\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid string literal declaration: {StringLit}\n", 1);
                         }
                     }
                     else if (Directive == ".word")
@@ -1008,7 +1008,7 @@ namespace Assembler
                     }
                     else
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported data memory directive `{Directive}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported data memory directive {Directive}\n", 1);
                     }
                 }
             }

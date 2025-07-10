@@ -43,26 +43,26 @@ namespace LibCPU
         {
             return 
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2), // rs1
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 24, 20), 2), // rs2
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7) , 2)  // rd
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2),
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 24, 20), 2),
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7) , 2) 
             );
         }
         static (int rs1, string imm12, int rd) GetItypeInst(string mc)
         {
             return
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2), // rs1
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2),
                 LibUtils.GetFromIndexLittle(mc, 31, 20),
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7), 2)   // rd
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7), 2)  
             );
         }
         static (int rs1, int rs2, string imm12) GetStypeInst(string mc)
         {
             return
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2), // rs1
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 24, 20), 2), // rs2
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2),
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 24, 20), 2),
                 LibUtils.GetFromIndexLittle(mc, 31, 25) + LibUtils.GetFromIndexLittle(mc, 11, 7)
             );
         }
@@ -70,7 +70,7 @@ namespace LibCPU
         {
             return
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7), 2),  // rd
+                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7), 2), 
                 LibUtils.GetFromIndexLittle(mc, 31, 12)
             );
         }
@@ -104,7 +104,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -122,7 +122,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -150,7 +150,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -167,7 +167,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -189,7 +189,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -211,7 +211,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -233,7 +233,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -250,7 +250,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 `{Funct7}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
                                     break;
                                 }
                         }
@@ -258,7 +258,7 @@ namespace LibCPU
                     }
                 default:
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 `{Funct3}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
                         break;
                     }
             }
@@ -338,7 +338,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7-like `{Funct7Like}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7-like {Funct7Like}\n", 1);
                                     break;
                                 }
                         }
@@ -346,7 +346,7 @@ namespace LibCPU
                     }
                 default:
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 `{Funct3}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
                         break;
                     }
             }
@@ -391,7 +391,7 @@ namespace LibCPU
                             }
                             else
                             {
-                                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported file descriptor `{FileDescriptor}`\n", 1);
+                                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported file descriptor {FileDescriptor}\n", 1);
                             }
                         }
                         else if (syscall == 93)
@@ -403,7 +403,7 @@ namespace LibCPU
                         }
                         else
                         {
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported syscall `{syscall}`\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported syscall {syscall}\n", 1);
                         }
                         PC += 4;
                         break;
@@ -445,7 +445,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 `{Funct3}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
                                     break;
                                 }
                         }
@@ -453,9 +453,6 @@ namespace LibCPU
                     }
                 case "1110111":
                     {
-                        // t = pc+4;
-                        // pc = (x[rs1] + SignExtended(offset)) & ~1;
-                        // x[rd] = t
                         (int rs1, string imm12, int rd) = GetItypeInst(mc);
                         int t = PC + 4;
                         int imm = Convert.ToInt32(imm12.PadLeft(32, imm12[0]), 2);
@@ -492,7 +489,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 `{Funct3}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
                                     break;
                                 }
                         }
@@ -525,7 +522,7 @@ namespace LibCPU
                                 }
                             default:
                                 {
-                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 `{Funct3}`\n", 1);
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
                                     break;
                                 }
                         }
@@ -544,7 +541,6 @@ namespace LibCPU
                 case "0010111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        // x[rd] = pc + SignExtended(immediate[31:12] << 12)
                         int imm = Convert.ToInt32(imm20.PadLeft(32, '0'), 2) << 12;
                         RegisterFile[rd] = PC + imm;
                         PC += 4;
@@ -553,7 +549,6 @@ namespace LibCPU
                 case "1111111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
                         int imm = Convert.ToInt32(imm20.PadLeft(32, imm20[0]), 2) << 1;
                         RegisterFile[rd] = PC + 4;
                         PC += imm;
@@ -561,7 +556,7 @@ namespace LibCPU
                     }
                 default:
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsuppored opcode `{opcode}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsuppored opcode {opcode}\n", 1);
                         Shartilities.UNREACHABLE("invalid opcode");
                         break;
                     }
@@ -601,7 +596,7 @@ namespace LibCPU
             }
             if (CyclesConsumed == MAX_CLOCKS)
             {
-                Shartilities.Log(Shartilities.LogType.ERROR, $"cycles consumed reached the limit\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"cycles consumed reached the limit, it consumed: {MAX_CLOCKS}\n", 1);
             }
         }
         static void GenerateRegFileDMStates(string OutPutFilePath)

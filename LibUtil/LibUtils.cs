@@ -123,10 +123,6 @@ public static class LibUtils
         public string Funct3 = Funct3;
         public string Funct7 = Funct7;
     }
-    // TODO:
-    //      - test the edge case of load immediate `li` and go back to the assembler
-    //      - test all instruction in all cases (specially ones that uses immediate)
-    //      - test shift instructions and ensure that it uses only 5-bits of the oprand
     public static dynamic StringToNumberLiteral(string imm)
     {
         if (imm.StartsWith("0x"))
@@ -134,7 +130,7 @@ public static class LibUtils
             imm = imm[2..];
             if (UInt32.TryParse(imm, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out UInt32 value))
                 return value;
-            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate {imm}\n", 1);
         }
         else
         {
@@ -142,7 +138,7 @@ public static class LibUtils
                 return UnsignedValue;
             else if (Int32.TryParse(imm, out Int32 SignedValue))
                 return SignedValue;
-            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate `{imm}`\n", 1);
+            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate {imm}\n", 1);
         }
         Shartilities.UNREACHABLE("GetImmediate");
         return "BogusAmogus";
@@ -183,24 +179,24 @@ public static class LibUtils
             {
                 if (!IsValidDataMemoryDirective(DataMemoryValues[i]))
                 {
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported data memory directive `{Directive}`\n", 1);
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported data memory directive {Directive}\n", 1);
                 }
                 Directive = DataMemoryValues[i];
                 if (Directive == ".space")
                 {
                     i++;
                     if (!uint.TryParse(DataMemoryValues[i], out uint count))
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate `{DataMemoryValues[i]}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate {DataMemoryValues[i]}\n", 1);
                     for (int j = 0; j < count; j++) DM_Bytes.Add("0");
                 }
                 else if (Directive == ".string")
                 {
                     i++;
                     if (!uint.TryParse(DataMemoryValues[i], out uint len))
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate `{DataMemoryValues[i]}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate {DataMemoryValues[i]}\n", 1);
                     i++;
                     if (i + len > DataMemoryValues.Count)
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid length of string literal `{len}`\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid length of string literal {len}\n", 1);
                     for (int j = i; j < i + len; j++)
                     {
                         if (DataMemoryValues[i].Length > 0)
@@ -268,7 +264,7 @@ public static class LibUtils
         }
         catch
         {
-            Shartilities.Log(Shartilities.LogType.ERROR, $"could not index `{str}`\n", 1);
+            Shartilities.Log(Shartilities.LogType.ERROR, $"could not index {str}\n", 1);
         }
         Shartilities.UNREACHABLE("GetFromIndexLittle");
         return "";
