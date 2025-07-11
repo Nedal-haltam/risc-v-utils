@@ -56,6 +56,7 @@ namespace Assembler
                 Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
                 Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
                 Console.WriteLine($"    {"rs1", -7}: {rs1}");
+                Console.WriteLine($"    {"rs2", -7}: {rs2}");
                 Console.WriteLine($"    {"imm", -7}: {imm12}");
             }
             return LibUtils.GetFromIndexLittle(imm12, 11, 5) + rs2 + rs1 + info.Funct3 + LibUtils.GetFromIndexLittle(imm12, 4, 0) + info.Opcode;
@@ -130,7 +131,7 @@ namespace Assembler
                 case "la":
                     {
                         // la rd,symbol → ↓
-                        // auipc rd, symbol[31:12] + 1
+                        // lui rd, symbol[31:12] + 1
                         // addi rd, rd, symbol[11:0]
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
@@ -1033,7 +1034,7 @@ namespace Assembler
                     {
                         if (p.Instructions[i].m_tokens[j] == l.Key)
                         {
-                            uint offset = l.Value - 4 * (uint)(i);
+                            int offset = (int)l.Value - 4 * i;
                             p.Instructions[i].m_tokens[j] = offset.ToString();
                         }
                     }
