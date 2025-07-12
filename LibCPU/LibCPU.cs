@@ -457,52 +457,55 @@ namespace LibCPU
                     }
                 case "0000011":
                     {
-                        (int rs1, string imm12_, int rd) = GetItypeInst(mc);
+                        (int rs1, string imm12, int rd) = GetItypeInst(mc);
                         switch (Funct3)
                         {
                             case "000":
                                 {
-                                    Shartilities.TODO("sb");
-                                    int imm = Convert.ToInt32(imm12_.PadLeft(32, imm12_[0]), 2);
-                                    // load data -> convert to binary -> get [7:0] -> SignExtend it -> convert to Int32 -> save in register file
-                                    string b = DataMemory.GetByte((int)RegisterFile[rs1] + imm).ToString();
-                                    string LoadedDataBin = LibUtils.GetFromIndexLittle(LibUtils.StringToBin(b), 7, 0);
-                                    LoadedDataBin = LoadedDataBin.PadLeft(32, LoadedDataBin[0]);
-                                    RegisterFile[rd] = Convert.ToInt32(LoadedDataBin, 2);
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = DataMemory.GetByte((int)Address);
+                                    RegisterFile[rd] = Convert.ToInt64(sext(value, 64), 2);
+                                    PC += 4;
                                     break;
                                 }
                             case "001":
                                 {
-                                    Shartilities.TODO("lh");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = DataMemory.GetHalfWord((int)Address);
+                                    RegisterFile[rd] = Convert.ToInt64(sext(value, 64), 2);
+                                    PC += 4;
                                     break;
                                 }
                             case "010":
                                 {
-                                    Shartilities.TODO("lw");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = DataMemory.GetWord((int)Address);
+                                    RegisterFile[rd] = Convert.ToInt64(sext(value, 64), 2);
+                                    PC += 4;
                                     break;
                                 }
-                            case "011": // ld
+                            case "011":
                                 {
-                                    Shartilities.TODO("ld");
-                                    //int imm = Convert.ToInt32(imm12.PadLeft(32, imm12[0]), 2);
-                                    //string LoadedDataBin = LibUtils.GetFromIndexLittle(LibUtils.GetImmediateToBin(DataMemory[(int)RegisterFile[rs1] + imm]), 7, 0);
-                                    //LoadedDataBin = LoadedDataBin.PadLeft(32, LoadedDataBin[0]);
-                                    //RegisterFile[rd] = Convert.ToInt32(LoadedDataBin, 2);
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = DataMemory.GetDoubleWord((int)Address);
+                                    RegisterFile[rd] = Convert.ToInt64(sext(value, 64), 2);
+                                    PC += 4;
                                     break;
                                 }
-                            case "100": // lbu
+                            case "100":
                                 {
-                                    Shartilities.TODO("lbu");
-                                    int imm = Convert.ToInt32(imm12_.PadLeft(32, imm12_[0]), 2);
-                                    string b = DataMemory.GetByte((int)RegisterFile[rs1] + imm).ToString();
-                                    string LoadedDataBin = LibUtils.GetFromIndexLittle(LibUtils.StringToBin(b), 7, 0);
-                                    LoadedDataBin = LoadedDataBin.PadLeft(32, '0');
-                                    RegisterFile[rd] = Convert.ToInt32(LoadedDataBin, 2);
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = DataMemory.GetByte((int)Address);
+                                    RegisterFile[rd] = Convert.ToInt64(zext(value, 64), 2);
+                                    PC += 4;
                                     break;
                                 }
                             case "101":
                                 {
-                                    Shartilities.TODO("lhu");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = DataMemory.GetHalfWord((int)Address);
+                                    RegisterFile[rd] = Convert.ToInt64(zext(value, 64), 2);
+                                    PC += 4;
                                     break;
                                 }
                             default:
