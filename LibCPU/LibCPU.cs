@@ -31,34 +31,73 @@ namespace LibCPU
     }
     public struct Memory
     {
-        // list of byte in base-10
-        public List<string> memory;
+        // list of byte in base-2
+        private readonly List<string> m_Memory;
+        private readonly uint m_DM_SIZE;
         public Memory(List<string> DataMemoryInit, uint DM_SIZE)
         {
-            memory = [];
-            memory.AddRange(DataMemoryInit);
-            int dmcount = memory.Count;
-            for (int i = 0; i < DM_SIZE - dmcount; i++) memory.Add("0");
+            m_DM_SIZE = DM_SIZE;
+            m_Memory = [];
+            foreach (string s in DataMemoryInit)
+            {
+                if (byte.TryParse(s, out byte unsigned))
+                    m_Memory.Add(zext(Convert.ToString(unsigned, 2), 8));
+                else if (sbyte.TryParse(s, out sbyte signed))
+                    m_Memory.Add(Convert.ToString(signed, 2));
+            }
+            int dmcount = m_Memory.Count;
+            string zero = zext("", 8);
+            for (uint i = 0; i < DM_SIZE - dmcount; i++) m_Memory.Add(zero);
         }
-        public byte GetByte(int Address)
+        public void Clear()
         {
-            Shartilities.TODO("GetByte");
-            return 0;
+            m_Memory.Clear();
+            for (int i = 0; i < m_DM_SIZE; i++) m_Memory.Add("0");
         }
-        public byte GetHalfWord(int Address)
+        public List<string> GetMemory() => m_Memory;
+        public string GetByte(int Address)
         {
-            Shartilities.TODO("GetHalfWord");
-            return 0;
+            return m_Memory[Address];
         }
-        public byte GetWord(int Address)
+        public string GetHalfWord(int Address)
         {
-            Shartilities.TODO("GetWord");
-            return 0;
+            string ret = "";
+            for (int i = 0; i < 2; i++)
+                ret = m_Memory[Address + i] + ret;
+            return ret;
         }
-        public byte GetDouble(int Address)
+        public string GetWord(int Address)
         {
-            Shartilities.TODO("GetDouble");
-            return 0;
+            string ret = "";
+            for (int i = 0; i < 4; i++)
+                ret = m_Memory[Address + i] + ret;
+            return ret;
+        }
+        public string GetDoubleWord(int Address)
+        {
+            string ret = "";
+            for (int i = 0; i < 8; i++)
+                ret = m_Memory[Address + i] + ret;
+            return ret;
+        }
+        public void SetByte(int Address, string BinaryByte)
+        {
+            m_Memory[Address] = GetFromIndexLittle(BinaryByte, 7, 0);
+        }
+        public void SetHalfWord(int Address, string BinaryHalfWord)
+        {
+            for (int i = 0; i < 2; i++)
+                m_Memory[Address + i] = GetFromIndexLittle(BinaryHalfWord, 8 * (i + 1) - 1, 8 * i);
+        }
+        public void SetWord(int Address, string BinaryWord)
+        {
+            for (int i = 0; i < 4; i++)
+                m_Memory[Address + i] = GetFromIndexLittle(BinaryWord, 8 * (i + 1) - 1, 8 * i);
+        }
+        public void SetDoubleWord(int Address, string BinaryDoubleWord)
+        {
+            for (int i = 0; i < 8; i++)
+                m_Memory[Address + i] = GetFromIndexLittle(BinaryDoubleWord, 8 * (i + 1) - 1, 8 * i);
         }
     }
     public static class SingleCycle
