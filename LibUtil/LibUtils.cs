@@ -216,12 +216,11 @@ public static class LibUtils
         StringBuilder sb = new();
         sb.Append("Register file content : \n");
         int i = 0;
-        foreach (string n in regs)
+        foreach (string reg in regs)
         {
-            Int64 signed = Int64.Parse(n);
-            UInt64 unsigned = signed < 0 ? (uint)signed : UInt64.Parse(n);
-            string temp = $"index = {i++,10} , reg_out : signed = {signed,10} , unsigned = {unsigned,10}\n";
-            sb.Append(temp);
+            long signed = Convert.ToInt64(reg, 2);
+            ulong unsigned = Convert.ToUInt64(reg, 2);
+            sb.Append($"index = {i++,10} , reg_out : signed = {signed,10} , unsigned = {unsigned,10}\n");
         }
         return sb;
     }
@@ -232,11 +231,9 @@ public static class LibUtils
         int i = 0;
         foreach (string mem in DM)
         {
-            string temp;
-
-            temp = $"Mem[{i++,4}] = {mem,11}\n";
-
-            sb.Append(temp);
+            sbyte signed = Convert.ToSByte(mem, 2);
+            byte unsigned = Convert.ToByte(mem, 2);
+            sb.Append($"Mem[{i++,4}] = signed = {signed,3} , unsigned = {unsigned,3}\n");
         }
         return sb;
     }
