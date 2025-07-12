@@ -3,41 +3,41 @@ using System.Text;
 
 public static class LibUtils
 {
-    public static readonly Dictionary<string, int> REG_LIST = new()
+    public static readonly Dictionary<string, (string, int)> REG_LIST = new()
     {
-        {"zero", 0},
-        {"ra"  , 1},
-        {"sp"  , 2},
-        {"gp"  , 3},
-        {"tp"  , 4},
-        {"t0"  , 5},
-        {"at"  , 5},
-        {"t1"  , 6},
-        {"t2"  , 7},
-        {"s0"  , 8},
-        {"s1"  , 9},
-        {"a0"  , 10},
-        {"a1"  , 11},
-        {"a2"  , 12},
-        {"a3"  , 13},
-        {"a4"  , 14},
-        {"a5"  , 15},
-        {"a6"  , 16},
-        {"a7"  , 17},
-        {"s2"  , 18},
-        {"s3"  , 19},
-        {"s4"  , 20},
-        {"s5"  , 21},
-        {"s6"  , 22},
-        {"s7"  , 23},
-        {"s8"  , 24},
-        {"s9"  , 25},
-        {"s10" , 26},
-        {"s11" , 27},
-        {"t3"  , 28},
-        {"t4"  , 29},
-        {"t5"  , 30},
-        {"t6"  , 31},
+        {"zero", new("00000", 0)},
+        {"ra"  , new("00001", 1)},
+        {"sp"  , new("00010", 2)},
+        {"gp"  , new("00011", 3)},
+        {"tp"  , new("00100", 4)},
+        {"t0"  , new("00101", 5)},
+        {"at"  , new("00101", 5)},
+        {"t1"  , new("00110", 6)},
+        {"t2"  , new("00111", 7)},
+        {"s0"  , new("01000", 8)},
+        {"s1"  , new("01001", 9)},
+        {"a0"  , new("01010", 10)},
+        {"a1"  , new("01011", 11)},
+        {"a2"  , new("01100", 12)},
+        {"a3"  , new("01101", 13)},
+        {"a4"  , new("01110", 14)},
+        {"a5"  , new("01111", 15)},
+        {"a6"  , new("10000", 16)},
+        {"a7"  , new("10001", 17)},
+        {"s2"  , new("10010", 18)},
+        {"s3"  , new("10011", 19)},
+        {"s4"  , new("10100", 20)},
+        {"s5"  , new("10101", 21)},
+        {"s6"  , new("10110", 22)},
+        {"s7"  , new("10111", 23)},
+        {"s8"  , new("11000", 24)},
+        {"s9"  , new("11001", 25)},
+        {"s10" , new("11010", 26)},
+        {"s11" , new("11011", 27)},
+        {"t3"  , new("11100", 28)},
+        {"t4"  , new("11101", 29)},
+        {"t5"  , new("11110", 30)},
+        {"t6"  , new("11111", 31)},
     };
     public readonly static Dictionary<string, InstInfo> Infos = new()
     {
@@ -123,32 +123,19 @@ public static class LibUtils
         public string Funct3 = Funct3;
         public string Funct7 = Funct7;
     }
-    public static int StringToInt(string imm)
+    public static string StringToBin(string imm) => LongToBin(StringToLong(imm));
+    public static long StringToLong(string imm)
     {
         if (imm.StartsWith("0x"))
-        {
-            imm = imm[2..];
-            if (uint.TryParse(imm, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint value))
-                return (int)value;
-            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate {imm}\n", 1);
-        }
+            return Convert.ToInt64(imm, 16);
+        else if (imm.StartsWith("0b"))
+            return Convert.ToInt64(imm[2..], 2);
         else
-        {
-            if (int.TryParse(imm, out int SignedValue))
-                return SignedValue;
-            Shartilities.Log(Shartilities.LogType.ERROR, $"could not parse immediate {imm}\n", 1);
-        }
-        Shartilities.UNREACHABLE("GetImmediate");
-        return 0;
+            return Convert.ToInt64(imm, 10);
     }
-    public static string IntToBin(int NumberLiteral)
-    {
-        return Convert.ToString(NumberLiteral, 2).PadLeft(64, '0');
-    }
-    public static string StringToBin(string imm)
-    {
-        return IntToBin(StringToInt(imm));
-    }
+    public static string LongToBin(long NumberLiteral) => zext(Convert.ToString(NumberLiteral, 2), 64);
+    public static string sext(string imm, int length) => imm.PadLeft(length, imm[0]);
+    public static string zext(string imm, int length) => imm.PadLeft(length, '0');
     public static List<string> GetIM_INIT(List<string> MachinceCodes, List<Instruction> Instructions)
     {
         Shartilities.TODO("GetIM_INIT is not implemented");
