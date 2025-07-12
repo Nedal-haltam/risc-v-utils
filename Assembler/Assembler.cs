@@ -974,8 +974,11 @@ namespace Assembler
                                 }
                                 len++;
                             }
+                            temp.Add("\0");
+                            len++;
                             p.DataMemoryValues.Add(len.ToString());
                             p.DataMemoryValues.AddRange(temp);
+                            CurrentDataAddress += 1 * ((ulong)temp.Count);
                         }
                         else
                         {
