@@ -124,17 +124,25 @@ namespace Assembler
                         // la rd,symbol → ↓
                         // lui rd, symbol[31:12] + 1
                         // addi rd, rd, symbol[11:0]
+                        //CheckTokensCount(mnem, ts.Count, 3);
+                        //string rd = GetRegisterIndex(ts[1]);
+                        //string symbol = ts[2];
+                        //symbol = StringToBin(symbol);
+                        //return [
+                        //    GetUtypeInst("lui", LibUtils.GetFromIndexLittle(symbol, 31, 12), rd),
+                        //    GetItypeInst("addi" , LibUtils.GetFromIndexLittle(symbol, 11, 0), rd, rd),
+                        //    ];
+
+                        // to account for the sign extension of symbol[11:0] in the addi instruction
+                        // TODO:
+                        //symbol = Convert.ToString(Convert.ToUInt32(symbol, 2) + (uint)(symbol[20] == '1' ? 1 << 12 : 0), 2).PadLeft(32, '0');
+
+                        // TODO: fix `la` instruction
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
-                        string symbol = ts[2];
-                        symbol = StringToBin(symbol);
-                        //// to account for the sign extension of symbol[11:0] in the addi instruction
-                        //// TODO: should we handle it in software (easier) or in hardware (not hard)
-                        //symbol = Convert.ToString(Convert.ToUInt32(symbol, 2) + (uint)(symbol[20] == '1' ? 1 << 12 : 0), 2).PadLeft(32, '0');
-                        return [
-                            GetUtypeInst("lui", LibUtils.GetFromIndexLittle(symbol, 31, 12), rd),
-                            GetItypeInst("addi" , LibUtils.GetFromIndexLittle(symbol, 11, 0), rd, rd),
-                            ];
+                        string imm = ts[2];
+                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
+                        return [GetItypeInst("addi", imm, GetRegisterIndex("zero"), rd)];
                     }
                 case "addi":
                     {
@@ -601,7 +609,6 @@ namespace Assembler
                         // pc = (x[rs1] + SignExtended(offset)) & ~1;
                         // x[rd] = t
                         // NOTE: the steps above are important and should be implemented exactly as shown
-                        // ofcourse they are gonna be executed in parallel in hardware but should be taken into account when performing the operation
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
@@ -819,34 +826,18 @@ namespace Assembler
 
             return (TextSection, DataSection);
         }
-        static string ParseLabel(string input)
+        static string ParseLabel(string label)
         {
-            string label = input.Trim();
-            int ColonIndex = label.IndexOf(':');
-            if (ColonIndex == label.Length - 1)
-            {
-                label = label[..^1].Trim();
-                if (label.Split(' ').Length > 1)
-                {
-                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid label syntax {input}\n", 1);
-                }
-                else
-                {
-                    return label;
-                }
-            }
-            else
-            {
-                Shartilities.Log(Shartilities.LogType.ERROR, $"the syntax is not supported yet\n");
-            }
-            Shartilities.UNREACHABLE("ParseLabel");
-            return "";
+            label = label[..^1].Trim();
+            if (label.Split(' ').Length > 1)
+                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid label syntax {label}\n", 1);
+            return label;
         }
         static uint GetInstructionSize(string mnem)
         {
             return mnem switch
             {
-                "la" => 8,
+                //"la" => 8,
                 _ => 4,
             };
         }
@@ -881,9 +872,11 @@ namespace Assembler
                 int LineNumber = TextSection[i].Item1;
                 string instruction = TextSection[i].Item2;
 
-                if (instruction.Contains(':'))
+                string PossibleLabel = instruction.Trim();
+                int ColonIndex = PossibleLabel.LastIndexOf(':');
+                if (ColonIndex == PossibleLabel.Length - 1)
                 {
-                    Labels.Add(ParseLabel(instruction), LabelAddress);
+                    Labels.Add(ParseLabel(PossibleLabel), LabelAddress);
                 }
                 else
                 {
@@ -908,15 +901,17 @@ namespace Assembler
                 }
             }
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            Dictionary<string, UInt32> DataSectionAddresses = [];
-            UInt32 CurrentDataAddress = 0;
+            Dictionary<string, ulong> DataSectionAddresses = [];
+            ulong CurrentDataAddress = 0;
             for (int i = 0; i < DataSection.Count; i++)
             {
                 string line = DataSection[i].Item2;
-                if (line.Contains(':'))
+
+                string PossibleLabel = line.Trim();
+                int ColonIndex = PossibleLabel.LastIndexOf(':');
+                if (ColonIndex == PossibleLabel.Length - 1)
                 {
-                    string label = ParseLabel(DataSection[i].Item2);
-                    DataSectionAddresses.Add(label, CurrentDataAddress);
+                    DataSectionAddresses.Add(ParseLabel(PossibleLabel), CurrentDataAddress);
                 }
                 else if (line == ".section .bss")
                 {
@@ -940,7 +935,7 @@ namespace Assembler
                         if (data.Count != 1)
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid number of expressions should be one for .space directive\n", 1);
 
-                        if (!UInt32.TryParse(data[0], out UInt32 value))
+                        if (!ulong.TryParse(data[0], out ulong value))
                             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value {data[0]}\n", 1);
                         CurrentDataAddress += 1 * value;
                     }
@@ -993,8 +988,7 @@ namespace Assembler
                         for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
                         p.DataMemoryValues.Add(Directive);
                         p.DataMemoryValues.AddRange(data);
-                        int size = 4;
-                        CurrentDataAddress += (UInt32)(size * data.Count);
+                        CurrentDataAddress += 4 * (ulong)data.Count;
                     }
                     else
                     {
@@ -1003,7 +997,7 @@ namespace Assembler
                 }
             }
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            foreach (KeyValuePair<string, UInt32> address in DataSectionAddresses)
+            foreach (KeyValuePair<string, ulong> address in DataSectionAddresses)
             {
                 for (int i = 0; i < p.Instructions.Count; i++)
                 {
