@@ -218,8 +218,8 @@ public static class LibUtils
         int i = 0;
         foreach (string n in regs)
         {
-            Int32 signed = Int32.Parse(n);
-            UInt32 unsigned = signed < 0 ? (uint)signed : UInt32.Parse(n);
+            Int64 signed = Int64.Parse(n);
+            UInt64 unsigned = signed < 0 ? (uint)signed : UInt64.Parse(n);
             string temp = $"index = {i++,10} , reg_out : signed = {signed,10} , unsigned = {unsigned,10}\n";
             sb.Append(temp);
         }
