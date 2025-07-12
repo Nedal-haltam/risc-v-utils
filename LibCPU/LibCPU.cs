@@ -519,9 +519,9 @@ namespace LibCPU
                 case "1110111":
                     {
                         (int rs1, string imm12, int rd) = GetItypeInst(mc);
-                        Int64 t = PC + 4;
-                        Int64 imm = Convert.ToInt64(imm12.PadLeft(64, imm12[0]), 2);
-                        PC = (int)(RegisterFile[rs1] + (imm & ~1));
+                        long t = PC + 4;
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
+                        PC = RegisterFile[rs1] + (imm & ~1);
                         RegisterFile[rd] = t;
                         break;
                     }
@@ -534,22 +534,34 @@ namespace LibCPU
                         {
                             case "000":
                                 {
-                                    Shartilities.TODO("sb");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 7, 0);
+                                    DataMemory.SetByte((int)Address, value);
+                                    PC += 4;
                                     break;
                                 }
                             case "001":
                                 {
-                                    Shartilities.TODO("sh");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 15, 0);
+                                    DataMemory.SetHalfWord((int)Address, value);
+                                    PC += 4;
                                     break;
                                 }
                             case "010":
                                 {
-                                    Shartilities.TODO("sw");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 31, 0);
+                                    DataMemory.SetWord((int)Address, value);
+                                    PC += 4;
                                     break;
                                 }
                             case "011":
                                 {
-                                    Shartilities.TODO("sd");
+                                    long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
+                                    string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 63, 0);
+                                    DataMemory.SetDoubleWord((int)Address, value);
+                                    PC += 4;
                                     break;
                                 }
                             default:
@@ -562,7 +574,7 @@ namespace LibCPU
                     }
                 case "1100011":
                     {
-                        (int rs1, int rs2, string imm12_) = GetStypeInst(mc);
+                        (int rs1, int rs2, string imm12) = GetStypeInst(mc);
                         switch (Funct3)
                         {
                             case "000":
