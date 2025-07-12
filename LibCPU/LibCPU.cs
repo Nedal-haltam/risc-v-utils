@@ -45,12 +45,7 @@ namespace LibCPU
             m_DM_SIZE = DM_SIZE;
             m_Memory = [];
             foreach (string s in DataMemoryInit)
-            {
-                if (byte.TryParse(s, out byte unsigned))
-                    m_Memory.Add(zext(Convert.ToString(unsigned, 2), 8));
-                else if (sbyte.TryParse(s, out sbyte signed))
-                    m_Memory.Add(Convert.ToString(signed, 2));
-            }
+                m_Memory.Add(zext(Convert.ToString(Convert.ToSByte(s, 10), 2), 8));
             int dmcount = m_Memory.Count;
             string zero = zext("", 8);
             for (uint i = 0; i < DM_SIZE - dmcount; i++) m_Memory.Add(zero);
