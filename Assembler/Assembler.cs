@@ -1,7 +1,4 @@
-﻿using System.Diagnostics;
-using System.Globalization;
-using System.Security.Cryptography;
-using static LibUtils;
+﻿using static LibUtils;
 namespace Assembler
 {
     public static class Assembler
@@ -84,19 +81,13 @@ namespace Assembler
             if (reg.StartsWith('$') || reg.StartsWith('x'))
                 reg = reg[1..];
 
-            if (REG_LIST.TryGetValue(reg, out int index))
-            {
-                return Convert.ToString(index, 2).PadLeft(5, '0');
-            }
-            else if (byte.TryParse(reg, out byte usb) && usb >= 0 && usb <= 31)
-            {
-                return Convert.ToString(usb, 2).PadLeft(5, '0');
-            }
-            else
-            {
-                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register {reg}\n", 1);
-                return "";
-            }
+            if (REG_LIST.TryGetValue(reg, out var index))
+                return index.Item1;
+            else if (byte.TryParse(reg, out byte Index) && 0 <= Index && Index <= 31)
+                return zext(Convert.ToString(Index, 2), 5);
+
+            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register {reg}\n", 1);
+            return "";
         }
         static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid {mnem} instruction number of tokens is not {want}");
         static List<string> Instruction2MachineCodes(Instruction inst)
@@ -171,7 +162,7 @@ namespace Assembler
                     {
                         // nop
                         // nothing
-                        return [GetItypeInst("addi", "".PadLeft(12, '0'), GetRegisterIndex("zero"), GetRegisterIndex("zero"))];
+                        return [GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero"), GetRegisterIndex("zero"))];
                     }
                 case "mv":
                     {
@@ -180,7 +171,7 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
-                        return [GetItypeInst("addi", "".PadLeft(12, '0'), rs1, rd)];
+                        return [GetItypeInst("addi", zext("", 12), rs1, rd)];
                     }
                 case "slti":
                     {
@@ -225,7 +216,7 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string rd = GetRegisterIndex(ts[1]);
-                        return [GetItypeInst("xori", "".PadLeft(12, '1'), rs1, rd)];
+                        return [GetItypeInst("xori", sext("1", 12), rs1, rd)];
                     }
                 case "ori":
                     {
@@ -259,7 +250,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        imm = StringToBin(imm).Substring(31 - 4, 5).PadLeft(12, '0');
+                        imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
                         return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "srli":
@@ -272,7 +263,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        imm = StringToBin(imm).Substring(31 - 4, 5).PadLeft(12, '0');
+                        imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
                         return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
                 case "srai":
@@ -285,7 +276,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string rs1 = GetRegisterIndex(ts[2]);
                         string imm = ts[3];
-                        imm = StringToBin(imm).Substring(31 - 4, 5).PadLeft(12, '0');
+                        imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
                         imm = string.Concat(imm.AsSpan()[..1], "1", imm.AsSpan(2));
                         return [GetItypeInst(mnem, imm, rs1, rd)];
                     }
@@ -451,7 +442,7 @@ namespace Assembler
                     {
                         // ecall
                         // RaiseException(EnvironmentCall)
-                        return [GetItypeInst(mnem, "".PadLeft(12, '0'), GetRegisterIndex("zero"), GetRegisterIndex("zero"))];
+                        return [GetItypeInst(mnem, zext("", 12), GetRegisterIndex("zero"), GetRegisterIndex("zero"))];
                     }
                 case "lb":
                     {
@@ -594,7 +585,7 @@ namespace Assembler
                 case "j":
                     {
                         // j label
-                        // pc = label === pc = pc + (label - pc) = pc + (offset)
+                        // pc = label -> pc = pc + (label - pc) = pc + (offset)
                         // j offset -> jal x0,offset
                         CheckTokensCount(mnem, ts.Count, 2);
                         string offset = ts[1];
@@ -623,7 +614,7 @@ namespace Assembler
                         // ret
                         // pc = ra
                         CheckTokensCount(mnem, ts.Count, 1);
-                        return [GetItypeInst("jalr", "".PadLeft(12, '0'), GetRegisterIndex("ra"), GetRegisterIndex("zero"))];
+                        return [GetItypeInst("jalr", zext("", 12), GetRegisterIndex("ra"), GetRegisterIndex("zero"))];
                     }
                 case "jr":
                     {
@@ -632,7 +623,7 @@ namespace Assembler
                         // jr rs1 -> jalr x0,rs1,0
                         CheckTokensCount(mnem, ts.Count, 2);
                         string rs1 = GetRegisterIndex(ts[1]);
-                        return [GetItypeInst("jalr", "".PadLeft(12, '0'), rs1, GetRegisterIndex("zero"))];
+                        return [GetItypeInst("jalr", zext("", 12), rs1, GetRegisterIndex("zero"))];
                     }
                 case "beq":
                     {
