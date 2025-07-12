@@ -1,4 +1,8 @@
+using System.Data;
+using System.Reflection.Metadata.Ecma335;
+using System.Security.Cryptography;
 using System.Text;
+using static LibUtils;
 
 namespace LibCPU
 {
@@ -8,24 +12,26 @@ namespace LibCPU
     }
     public struct RegisterFile
     {
+        // list of DoubleWords in base-2
         public List<string> Registers;
         public RegisterFile()
         {
             Registers = [];
-            for (int i = 0; i < 32; i++) Registers.Add("0");
+            string zero = zext("", 64);
+            for (int i = 0; i < 32; i++) Registers.Add(zero);
         }
-        public Int64 this[int index]
+        public long this[int index]
         {
             get
             {
                 Shartilities.Assert(0 <= index && index < Registers.Count, $"index out of bound in register file\n");
-                return Convert.ToInt64(Registers[index], 10);
+                return Convert.ToInt64(Registers[index], 2);
             }
             set
             {
                 Shartilities.Assert(0 <= index && index < Registers.Count, $"index out of bound in register file\n");
-                if (index != 0)
-                    Registers[index] = value.ToString();
+                if (index != 0) 
+                    Registers[index] = zext(Convert.ToString(value, 2), 64);
             }
         }
     }
@@ -102,55 +108,56 @@ namespace LibCPU
     }
     public static class SingleCycle
     {
+        ///////////////////////////////////////////////
         const int MAX_CLOCKS = 100 * 1000 * 1000;
         static List<string> InstructionMemory = [];
         static RegisterFile RegisterFile;
         static Memory DataMemory;
 
         static string? OutputFilePath;
-        static Int64 PC = 0;
+        static long PC = 0;
         static int CyclesConsumed = 0;
-
+        ///////////////////////////////////////////////
         static (int rs1, int rs2, int rd) GetRtypeInst(string mc)
         {
             return 
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2),
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 24, 20), 2),
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7) , 2) 
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 19, 15), 2),
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 24, 20), 2),
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 11, 7) , 2) 
             );
         }
         static (int rs1, string imm12, int rd) GetItypeInst(string mc)
         {
             return
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2),
-                LibUtils.GetFromIndexLittle(mc, 31, 20),
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7), 2)  
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 19, 15), 2),
+                GetFromIndexLittle(mc, 31, 20),
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 11, 7), 2)  
             );
         }
         static (int rs1, int rs2, string imm12) GetStypeInst(string mc)
         {
             return
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 19, 15), 2),
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 24, 20), 2),
-                LibUtils.GetFromIndexLittle(mc, 31, 25) + LibUtils.GetFromIndexLittle(mc, 11, 7)
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 19, 15), 2),
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 24, 20), 2),
+                GetFromIndexLittle(mc, 31, 25) + GetFromIndexLittle(mc, 11, 7)
             );
         }
         static (int rd, string imm20) GetUtypeInst(string mc)
         {
             return
             (
-                (int)Convert.ToUInt32(LibUtils.GetFromIndexLittle(mc, 11, 7), 2), 
-                LibUtils.GetFromIndexLittle(mc, 31, 12)
+                (int)Convert.ToUInt32(GetFromIndexLittle(mc, 11, 7), 2), 
+                GetFromIndexLittle(mc, 31, 12)
             );
         }
 
         static void ConsumeRType(string mc, int rs1, int rs2, int rd)
         {
-            string Funct3 = LibUtils.GetFromIndexLittle(mc, 14, 12);
-            string Funct7 = LibUtils.GetFromIndexLittle(mc, 31, 25);
+            string Funct3 = GetFromIndexLittle(mc, 14, 12);
+            string Funct7 = GetFromIndexLittle(mc, 31, 25);
             switch (Funct3)
             {
                 case "000":
@@ -189,7 +196,7 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] << ((int)RegisterFile[rs2] & 0x1F);
+                                    RegisterFile[rd] = RegisterFile[rs1] << ((int)(RegisterFile[rs2] & 0x1F));
                                     PC += 4;
                                     break;
                                 }
@@ -281,13 +288,13 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] >>> ((int)RegisterFile[rs2] & 0x1F);
+                                    RegisterFile[rd] = RegisterFile[rs1] >>> ((int)(RegisterFile[rs2] & 0x1F));
                                     PC += 4;
                                     break;
                                 }
                             case "0100000":
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] >> ((int)RegisterFile[rs2] & 0x1F);
+                                    RegisterFile[rd] = RegisterFile[rs1] >> ((int)(RegisterFile[rs2] & 0x1F));
                                     PC += 4;
                                     break;
                                 }
@@ -348,57 +355,57 @@ namespace LibCPU
                     }
             }
         }
-        static void ConsumeIType(string mc, int rs1, string imm12_, int rd)
+        static void ConsumeIType(string mc, int rs1, string imm12, int rd)
         {
-            string Funct3 = LibUtils.GetFromIndexLittle(mc, 14, 12);
-            string Funct7Like = LibUtils.GetFromIndexLittle(mc, 31, 25);
+            string Funct3 = GetFromIndexLittle(mc, 14, 12);
+            string Funct7Like = GetFromIndexLittle(mc, 31, 25);
             switch (Funct3)
             {
                 case "000":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, imm12_[0]), 2);
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] + imm;
                         PC += 4;
                         break;
                     }
                 case "010":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, imm12_[0]), 2);
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] < imm ? 1 : 0;
                         PC += 4;
                         break;
                     }
                 case "011":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, imm12_[0]), 2);
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = (UInt64)RegisterFile[rs1] < (UInt64)imm ? 1 : 0;
                         PC += 4;
                         break;
                     }
                 case "100":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, imm12_[0]), 2);
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] ^ imm;
                         PC += 4;
                         break;
                     }
                 case "110":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, imm12_[0]), 2);
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] | imm;
                         PC += 4;
                         break;
                     }
                 case "111":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, imm12_[0]), 2);
+                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] & imm;
                         PC += 4;
                         break;
                     }
                 case "001":
                     {
-                        Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, '0'), 2);
+                        long imm = Convert.ToInt64(zext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] << (int)imm;
                         PC += 4;
                         break;
@@ -409,14 +416,14 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, '0'), 2);
+                                    long imm = Convert.ToInt64(zext(imm12, 64), 2);
                                     RegisterFile[rd] = RegisterFile[rs1] >>> (int)imm;
                                     PC += 4;
                                     break;
                                 }
                             case "0100000":
                                 {
-                                    Int64 imm = Convert.ToInt64(imm12_.PadLeft(64, '0'), 2);
+                                    long imm = Convert.ToInt64(zext(imm12, 64), 2);
                                     RegisterFile[rd] = RegisterFile[rs1] >> (int)imm;
                                     PC += 4;
                                     break;
@@ -438,8 +445,8 @@ namespace LibCPU
         }
         static void ConsumeInstruction(string mc)
         {
-            string opcode = LibUtils.GetFromIndexLittle(mc, 6, 0);
-            string Funct3 = LibUtils.GetFromIndexLittle(mc, 14, 12);
+            string opcode = GetFromIndexLittle(mc, 6, 0);
+            string Funct3 = GetFromIndexLittle(mc, 14, 12);
             switch (opcode)
             {
                 // start of R-TYPE instructions
@@ -459,18 +466,18 @@ namespace LibCPU
                     }
                 case "1110011":
                     {
-                        Int64 syscall = RegisterFile[LibUtils.REG_LIST["a7"]];
+                        long syscall = RegisterFile[REG_LIST["a7"].Item2];
                         if (syscall == 64)
                         {
-                            Int64 FileDescriptor = RegisterFile[LibUtils.REG_LIST["a0"]];
-                            Int64 StringLitAddress = RegisterFile[LibUtils.REG_LIST["a1"]];
-                            Int64 StringLitLength = RegisterFile[LibUtils.REG_LIST["a2"]];
+                            long FileDescriptor = RegisterFile[REG_LIST["a0"].Item2];
+                            long StringLitAddress = RegisterFile[REG_LIST["a1"].Item2];
+                            long StringLitLength = RegisterFile[REG_LIST["a2"].Item2];
                             StringBuilder buffer = new();
                             if (FileDescriptor == 1)
                             {
                                 while (StringLitLength-- > 0)
                                 {
-                                    buffer.Append((char)DataMemory.GetByte((int)StringLitAddress));
+                                    buffer.Append((char)Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2));
                                     StringLitAddress++;
                                 }
                                 Console.Write(buffer.ToString());
@@ -482,9 +489,11 @@ namespace LibCPU
                         }
                         else if (syscall == 93)
                         {
-                            int ExitCode = (int)RegisterFile[LibUtils.REG_LIST["a0"]];
+                            int ExitCode = (int)RegisterFile[REG_LIST["a0"].Item2];
                             if (OutputFilePath != null)
                                 GenerateRegFileDMStates(OutputFilePath);
+                            if (ExitCode < 0)
+                                Shartilities.Log(Shartilities.LogType.ERROR, $"exit code cannot be negative\n", 1);
                             Environment.Exit(ExitCode);
                         }
                         else
@@ -649,7 +658,7 @@ namespace LibCPU
                 case "0110111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        Int64 imm = Convert.ToInt64(imm20.PadLeft(64, '0'), 2) << 12;
+                        long imm = Convert.ToInt64(zext(imm20, 64), 2) << 12;
                         RegisterFile[rd] = imm;
                         PC += 4;
                         break;
@@ -657,7 +666,7 @@ namespace LibCPU
                 case "0010111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        Int64 imm = Convert.ToInt64(imm20.PadLeft(64, '0'), 2) << 12;
+                        long imm = Convert.ToInt64(zext(imm20, 64), 2) << 12;
                         RegisterFile[rd] = PC + imm;
                         PC += 4;
                         break;
@@ -665,14 +674,14 @@ namespace LibCPU
                 case "1111111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        Int64 imm = Convert.ToInt64(imm20.PadLeft(64, imm20[0]), 2) << 1;
+                        long imm = Convert.ToInt64(sext(imm20, 64), 2) << 1;
                         RegisterFile[rd] = PC + 4;
                         PC += imm;
                         break;
                     }
                 default:
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsuppored opcode {opcode}\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsuppored opcode {opcode}, mc = `{mc}`\n", 1);
                         Shartilities.UNREACHABLE("invalid opcode");
                         break;
                     }
@@ -686,22 +695,21 @@ namespace LibCPU
             OutputFilePath = inputOutputFilePath;
             InstructionMemory = [];
             RegisterFile = new();
+            RegisterFile[REG_LIST["sp"].Item2] = DM_SIZE - 1;
             DataMemory = new(DataMemoryInit, DM_SIZE);
 
             foreach (string code in MachingCodes)
             {
-                InstructionMemory.Add(LibUtils.GetFromIndexLittle(code, 1 * 8 - 1, 0 * 8));
-                InstructionMemory.Add(LibUtils.GetFromIndexLittle(code, 2 * 8 - 1, 1 * 8));
-                InstructionMemory.Add(LibUtils.GetFromIndexLittle(code, 3 * 8 - 1, 2 * 8));
-                InstructionMemory.Add(LibUtils.GetFromIndexLittle(code, 4 * 8 - 1, 3 * 8));
+                InstructionMemory.Add(GetFromIndexLittle(code, 1 * 8 - 1, 0 * 8));
+                InstructionMemory.Add(GetFromIndexLittle(code, 2 * 8 - 1, 1 * 8));
+                InstructionMemory.Add(GetFromIndexLittle(code, 3 * 8 - 1, 2 * 8));
+                InstructionMemory.Add(GetFromIndexLittle(code, 4 * 8 - 1, 3 * 8));
             }
             int imcount = InstructionMemory.Count;
             for (int i = 0; i < IM_SIZE - imcount; i++)
                 InstructionMemory.Add("00000000");
-
-
-
-            while (CyclesConsumed < 50)
+            
+            while (CyclesConsumed < MAX_CLOCKS)
             {
                 CyclesConsumed++;
                 string mc = InstructionMemory[(int)PC + 3] + InstructionMemory[(int)PC + 2] + InstructionMemory[(int)PC + 1] + InstructionMemory[(int)PC];
@@ -717,8 +725,8 @@ namespace LibCPU
             if (OutPutFilePath != null)
             {
                 StringBuilder sb = new();
-                sb.Append(LibUtils.GetRegs(RegisterFile.Registers));
-                sb.Append(LibUtils.GetDM(DataMemory.memory));
+                sb.Append(GetRegs(RegisterFile.Registers));
+                sb.Append(GetDM(DataMemory.GetMemory()));
                 sb.Append($"Number of cycles consumed : {CyclesConsumed,10}\n");
                 File.WriteAllText(OutPutFilePath, sb.ToString());
                 Shartilities.Log(Shartilities.LogType.INFO, $"Generated CAS output of singlecyle in path {OutPutFilePath} successfully\n");
