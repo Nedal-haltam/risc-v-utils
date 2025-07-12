@@ -627,7 +627,15 @@ namespace LibCPU
                         {
                             case "000":
                                 {
-                                    Shartilities.TODO("beq");
+                                    long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
+                                    if (RegisterFile[rs1] == RegisterFile[rs2])
+                                    {
+                                        PC += offset;
+                                    }
+                                    else
+                                    {
+                                        PC += 4;
+                                    }
                                     break;
                                 }
                             case "001":
