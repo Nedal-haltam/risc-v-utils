@@ -574,8 +574,6 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1]);
                         string offset = ts[2];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
-                        //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
                         return [GetUtypeInst(mnem, offset, rd)];
                     }
                 case "call":
@@ -586,8 +584,6 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 2);
                         string offset = ts[1];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
-                        //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
                         return [GetUtypeInst("jal", offset, GetRegisterIndex("ra"))];
                     }
                 case "j":
@@ -598,8 +594,6 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 2);
                         string offset = ts[1];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        // TODO: what is this?? -> [20|10:1|11|19:12] in the immediate index for the jal instruction format
-                        //offset = string.Concat(offset[0], offset[10..20], offset[9], offset[1..9]); // offset = offset[20|10:1|11|19:12]
                         return [GetUtypeInst("jal", offset, GetRegisterIndex("zero"))];
                     }
                 case "jalr":
@@ -641,7 +635,6 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2]);
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        // TODO: see the immediate index for all the branch instruction formats
                         return [GetStypeInst(mnem, offset, rs1, rs2)];
                     }
                 case "beqz":
