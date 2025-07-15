@@ -722,7 +722,7 @@ namespace LibCPU
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
                         long imm = Convert.ToInt64(zext(imm20, 64), 2);
-                        RegisterFile[rd] = imm;
+                        RegisterFile[rd] = RegisterFile[rd] + imm;
                         PC += 4;
                         break;
                     }

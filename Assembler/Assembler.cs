@@ -112,9 +112,9 @@ namespace Assembler
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
                         return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
-                case "li20u": // user defined function
+                case "addi20u": // user defined function
                     {
-                        // li20u rd,imm
+                        // addi20u rd,imm
                         // x[rd] = ZeroExtended(imm[19:0])
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
@@ -174,12 +174,16 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string imm = ts[2];
-                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst("addi", imm, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
-                        Shartilities.TODO("assembling load immediate");
-                        string NumberBits = StringToBin(imm);
-                        // load 64 bits to a register (lui, addi, ori)
-                        return [];
+                        imm = StringToBin(imm);
+                        return [
+                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 63, 44), rd, inst.m_line),
+                                GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
+                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 43, 24), rd, inst.m_line),
+                                GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
+                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 23, 4), rd, inst.m_line),
+                                GetItypeInst("slli", "000000000100", rd, rd, inst.m_line),
+                                GetUtypeInst("addi20u", zext(GetFromIndexLittle(imm, 3, 0), 20), rd, inst.m_line),
+                            ];
                     }
                 case "nop":
                     {
