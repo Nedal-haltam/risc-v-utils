@@ -115,7 +115,7 @@ namespace Assembler
                 case "addi20u": // user defined function
                     {
                         // addi20u rd,imm
-                        // x[rd] = ZeroExtended(imm[19:0])
+                        // x[rd] = x[rd] + ZeroExtended(imm[19:0])
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string imm = ts[2];
@@ -176,6 +176,7 @@ namespace Assembler
                         string imm = ts[2];
                         imm = StringToBin(imm);
                         return [
+                                GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero", inst.m_line), rd, inst.m_line),
                                 GetUtypeInst("addi20u", GetFromIndexLittle(imm, 63, 44), rd, inst.m_line),
                                 GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
                                 GetUtypeInst("addi20u", GetFromIndexLittle(imm, 43, 24), rd, inst.m_line),
@@ -757,48 +758,6 @@ namespace Assembler
                     }
             }
         }
-        //static List<Instruction> GetPseudo(Instruction inst)
-        //{
-        //    else if (mnem == "li" && inst.m_tokens.Count == 3)
-        //    {
-        //        return [
-        //            new([new("ori"), new(inst.m_tokens[1].value), new("zero"), new(inst.m_tokens[2].value)])
-        //        ];
-        //    }
-        //    else if (mnem == "la" && inst.m_tokens.Count == 3)
-        //    {
-        //        return [
-        //            new([new("ori"), new(inst.m_tokens[1].value), new("zero"), new(inst.m_tokens[2].value)])
-        //        ];
-        //    }
-        //    else if (mnem == "ret")
-        //    {
-        //        return [
-        //            new([new("jr"), new("ra")])
-        //        ];
-        //    }
-        //}
-
-
-        //public static List<string> GetInstsAsText(Assembler.Program program)
-        //{
-        //    List<string> ret = [];
-        //    for (int i = 0; i < program.Instructions.Count; i++)
-        //    {
-        //        Assembler.Instruction instruction = program.Instructions[i];
-        //        string mnem = instruction.m_tokens[0].value;
-        //        if (mnem == "beq" || mnem == "bne")
-        //        {
-        //            string LabelValue = Convert.ToInt16(program.MachineCodes[i].Substring(16), 2).ToString();
-        //            instruction.m_tokens[^1] = new(LabelValue);
-        //        }
-        //        string inst = "";
-        //        instruction.m_tokens.ForEach(token => inst += token.value + " ");
-        //        ret.Add(inst);
-        //    }
-        //    return ret;
-        //}
-
         static (List<(int, string)>, List<(int, string)>) GetTextDataSections(List<(int, string)> src)
         {
             int TextIndex = src.FindIndex(x => x.Item2 == ".section .text");
@@ -847,12 +806,12 @@ namespace Assembler
         }
         static uint GetInstructionSize(string mnem)
         {
-            return mnem switch
+            switch (mnem.ToLower())
             {
-#if false
-                "la" => 8,
-#endif
-                _ => 4,
+                case "li":
+                    return 32;
+                default:
+                    return 4;
             };
         }
         public static Program AssembleProgram(string FilePath, bool LOG_INST_FLAG)
@@ -1033,16 +992,18 @@ namespace Assembler
             
             foreach (KeyValuePair<string, uint> l in Labels)
             {
+                uint AccumulatedAddress = 0;
                 for (int i = 0; i < p.Instructions.Count; i++)
                 {
                     for (int j = 1; j < p.Instructions[i].m_tokens.Count; j++)
                     {
                         if (p.Instructions[i].m_tokens[j] == l.Key)
                         {
-                            int offset = (int)l.Value - 4 * i;
+                            int offset = (int)(l.Value - AccumulatedAddress);
                             p.Instructions[i].m_tokens[j] = offset.ToString();
                         }
                     }
+                    AccumulatedAddress += GetInstructionSize(p.Instructions[i].m_tokens[0]);
                 }
             }
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
