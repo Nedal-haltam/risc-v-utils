@@ -45,7 +45,16 @@ namespace LibCPU
             m_DM_SIZE = DM_SIZE;
             m_Memory = [];
             foreach (string s in DataMemoryInit)
-                m_Memory.Add(zext(Convert.ToString(Convert.ToSByte(s, 10), 2), 8));
+            {
+                try
+                {
+                    m_Memory.Add(zext(Convert.ToString(Convert.ToSByte(s, 10), 2), 8));
+                }
+                catch
+                {
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"invalid data memory initialization with value {s}\n", 1);
+                }
+            }
             int dmcount = m_Memory.Count;
             string zero = zext("", 8);
             for (uint i = 0; i < DM_SIZE - dmcount; i++) m_Memory.Add(zero);
@@ -72,6 +81,7 @@ namespace LibCPU
             string ret = "";
             for (int i = 0; i < 4; i++)
                 ret = m_Memory[Address + i] + ret;
+
             return ret;
         }
         public string GetDoubleWord(int Address)
@@ -635,17 +645,41 @@ namespace LibCPU
                                 }
                             case "001":
                                 {
-                                    Shartilities.TODO("bne");
+                                    long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
+                                    if (RegisterFile[rs1] != RegisterFile[rs2])
+                                    {
+                                        PC += offset;
+                                    }
+                                    else
+                                    {
+                                        PC += 4;
+                                    }
                                     break;
                                 }
                             case "100":
                                 {
-                                    Shartilities.TODO("blt");
+                                    long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
+                                    if (RegisterFile[rs1] < RegisterFile[rs2])
+                                    {
+                                        PC += offset;
+                                    }
+                                    else
+                                    {
+                                        PC += 4;
+                                    }
                                     break;
                                 }
                             case "101":
                                 {
-                                    Shartilities.TODO("bge");
+                                    long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
+                                    if (RegisterFile[rs1] >= RegisterFile[rs2])
+                                    {
+                                        PC += offset;
+                                    }
+                                    else
+                                    {
+                                        PC += 4;
+                                    }
                                     break;
                                 }
                             default:
