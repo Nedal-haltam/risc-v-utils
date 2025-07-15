@@ -718,6 +718,14 @@ namespace LibCPU
                         PC += imm;
                         break;
                     }
+                case "1111110":
+                    {
+                        (int rd, string imm20) = GetUtypeInst(mc);
+                        long imm = Convert.ToInt64(zext(imm20, 64), 2);
+                        RegisterFile[rd] = imm;
+                        PC += 4;
+                        break;
+                    }
                 default:
                     {
                         Shartilities.Log(Shartilities.LogType.ERROR, $"unsuppored opcode {opcode}, mc = `{mc}`\n", 1);

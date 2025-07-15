@@ -89,6 +89,7 @@ public static class LibUtils
         {"lui"   , new("0110111", "", "")},
         {"auipc" , new("0010111", "", "")},
         {"jal"   , new("1111111", "", "")},
+        {"li20u" , new("1111110", "", "")},
     };
 
     public struct Instruction

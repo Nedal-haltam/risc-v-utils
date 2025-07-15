@@ -112,6 +112,16 @@ namespace Assembler
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
                         return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
+                case "li20u": // user defined function
+                    {
+                        // li20u rd,imm
+                        // x[rd] = ZeroExtended(imm[19:0])
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string imm = ts[2];
+                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 19, 0);
+                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
+                    }
                 case "auipc":
                     {
                         // auipc rd,imm
@@ -263,7 +273,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
-                        imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
+                        imm = zext(GetFromIndexLittle(StringToBin(imm), 5, 0), 12);
                         return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "srli":
@@ -276,7 +286,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
-                        imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
+                        imm = zext(GetFromIndexLittle(StringToBin(imm), 5, 0), 12);
                         return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "srai":
@@ -289,7 +299,7 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
-                        imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
+                        imm = zext(GetFromIndexLittle(StringToBin(imm), 5, 0), 12);
                         imm = string.Concat(imm.AsSpan()[..1], "1", imm.AsSpan(2));
                         return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
