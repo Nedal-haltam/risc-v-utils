@@ -661,7 +661,8 @@ namespace LibCPU
                 case "0110111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        long imm = Convert.ToInt64(zext(imm20, 64), 2) << 12;
+                        imm20 = imm20 + zext("", 12);
+                        long imm = Convert.ToInt64(sext(imm20, 64), 2);
                         RegisterFile[rd] = imm;
                         PC += 4;
                         break;
@@ -669,7 +670,8 @@ namespace LibCPU
                 case "0010111":
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        long imm = Convert.ToInt64(zext(imm20, 64), 2) << 12;
+                        imm20 = imm20 + zext("", 12);
+                        long imm = Convert.ToInt64(sext(imm20, 64), 2);
                         RegisterFile[rd] = PC + imm;
                         PC += 4;
                         break;
