@@ -79,13 +79,15 @@ namespace Assembler
         static string GetRegisterIndex(string reg)
         {
             if (reg.StartsWith('$') || reg.StartsWith('x'))
+            {
                 reg = reg[1..];
-
-            if (REG_LIST.TryGetValue(reg, out var index))
+                if (byte.TryParse(reg, out byte Index) && 0 <= Index && Index <= 31)
+                    return zext(Convert.ToString(Index, 2), 5);
+            }
+            else if (REG_LIST.TryGetValue(reg, out var index))
+            {
                 return index.Item1;
-            else if (byte.TryParse(reg, out byte Index) && 0 <= Index && Index <= 31)
-                return zext(Convert.ToString(Index, 2), 5);
-
+            }
             Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register {reg}\n", 1);
             return "";
         }
@@ -158,12 +160,15 @@ namespace Assembler
                     {
                         // li rd,immediate
                         // x[rd] = SignExtended(immediate)
-                        // TODO: fix and implement it using the Myriad sequences
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
                         string imm = ts[2];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
                         return [GetItypeInst("addi", imm, GetRegisterIndex("zero"), rd)];
+                        Shartilities.TODO("assembling load immediate");
+                        string NumberBits = StringToBin(imm);
+                        // load 64 bits to a register (lui, addi, ori)
+                        return [];
                     }
                 case "nop":
                     {
@@ -984,6 +989,7 @@ namespace Assembler
                         List<string> data = [.. line[index..].Trim().Split(',')];
                         for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
                         p.DataMemoryValues.Add(Directive);
+                        p.DataMemoryValues.Add(data.Count.ToString());
                         p.DataMemoryValues.AddRange(data);
                         CurrentDataAddress += 4 * (ulong)data.Count;
                     }
