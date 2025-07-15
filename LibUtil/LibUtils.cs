@@ -219,7 +219,9 @@ public static class LibUtils
                         {
                             string value = DataMemoryValues[j];
                             string bin = "";
-                            if (uint.TryParse(value, out uint signed))
+                            if (value.StartsWith("0x"))
+                                bin = zext(Convert.ToString(Convert.ToUInt32(value, 16), 2), 32);
+                            else if (uint.TryParse(value, out uint signed))
                                 bin = zext(Convert.ToString(signed, 2), 32);
                             else if (int.TryParse(value, out int unsigned))
                                 bin = zext(Convert.ToString(unsigned, 2), 32);

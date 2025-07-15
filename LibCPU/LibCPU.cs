@@ -48,7 +48,7 @@ namespace LibCPU
             {
                 try
                 {
-                    m_Memory.Add(zext(Convert.ToString(Convert.ToSByte(s, 10), 2), 8));
+                    m_Memory.Add(zext(Convert.ToString(Convert.ToByte(s, 10), 2), 8));
                 }
                 catch
                 {
