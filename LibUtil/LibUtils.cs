@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.ComponentModel.Design;
+using System.Globalization;
 using System.Text;
 
 public static class LibUtils
@@ -206,7 +207,31 @@ public static class LibUtils
                 }
                 else if (Directive == ".word")
                 {
-                    Shartilities.TODO(".word parsing");
+                    i++;
+                    if (!uint.TryParse(DataMemoryValues[i], out uint count))
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid immediate {DataMemoryValues[i]}\n", 1);
+                    i++;
+                    if (i + count > DataMemoryValues.Count)
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid number of words {count}\n", 1);
+                    for (int j = i; j < i + count; j++)
+                    {
+                        if (DataMemoryValues[i].Length > 0)
+                        {
+                            string value = DataMemoryValues[j];
+                            string bin = "";
+                            if (uint.TryParse(value, out uint signed))
+                                bin = zext(Convert.ToString(signed, 2), 32);
+                            else if (int.TryParse(value, out int unsigned))
+                                bin = zext(Convert.ToString(unsigned, 2), 32);
+                            else
+                                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid value in directive word {value}\n", 1);
+                            for (int k = 0; k < 4; k++)
+                                DM_Bytes.Add(Convert.ToByte(GetFromIndexLittle(bin, 8 * (k + 1) - 1, 8 * k), 2).ToString());
+                        }
+                        else
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"no character was provided in string literal\n", 1);
+                    }
+                    i += (int)count - 1;
                 }
             }
             else
