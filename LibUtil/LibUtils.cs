@@ -127,11 +127,24 @@ public static class LibUtils
     public static long StringToLong(string imm)
     {
         if (imm.StartsWith("0x"))
+        {
             return Convert.ToInt64(imm, 16);
+        }
         else if (imm.StartsWith("0b"))
+        {
             return Convert.ToInt64(imm[2..], 2);
+        }
         else
-            return Convert.ToInt64(imm, 10);
+        {
+            if (ulong.TryParse(imm, out ulong unsigned))
+                return (long)unsigned;
+            else if (long.TryParse(imm, out long signed))
+                return signed;
+            else
+                Shartilities.Log(Shartilities.LogType.ERROR, $"could not prase immediate: {imm}\n", 1);
+            Shartilities.UNREACHABLE("StringToLong");
+            return 0;
+        }
     }
     public static string LongToBin(long NumberLiteral) => zext(Convert.ToString(NumberLiteral, 2), 64);
     public static string sext(string imm, int length) => imm.PadLeft(length, imm[0]);
