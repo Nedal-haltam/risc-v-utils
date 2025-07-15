@@ -16,9 +16,9 @@ namespace Assembler
                 Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
                 Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
                 Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
-                Console.WriteLine($"    {"rs1", -7}: {rs1}");
-                Console.WriteLine($"    {"rs2", -7}: {rs2}");
-                Console.WriteLine($"    {"rd", -7}: {rd}");
+                Console.WriteLine($"    {"rs1"   , -7}: {rs1}");
+                Console.WriteLine($"    {"rs2"   , -7}: {rs2}");
+                Console.WriteLine($"    {"rd"    , -7}: {rd}");
             }
             return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
         }
@@ -34,9 +34,9 @@ namespace Assembler
                 Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
                 Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
                 Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
-                Console.WriteLine($"    {"rs1", -7}: {rs1}");
-                Console.WriteLine($"    {"imm", -7}: {imm12}");
-                Console.WriteLine($"    {"rd", -7}: {rd}");
+                Console.WriteLine($"    {"rs1"   , -7}: {rs1}");
+                Console.WriteLine($"    {"imm"   , -7}: {imm12}");
+                Console.WriteLine($"    {"rd"    , -7}: {rd}");
             }
             return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
         }
@@ -52,9 +52,9 @@ namespace Assembler
                 Console.WriteLine($"    {"opcode", -7}: {info.Opcode}");
                 Console.WriteLine($"    {"Funct3", -7}: {info.Funct3}");
                 Console.WriteLine($"    {"Funct7", -7}: {info.Funct7}");
-                Console.WriteLine($"    {"rs1", -7}: {rs1}");
-                Console.WriteLine($"    {"rs2", -7}: {rs2}");
-                Console.WriteLine($"    {"imm", -7}: {imm12}");
+                Console.WriteLine($"    {"rs1"   , -7}: {rs1}");
+                Console.WriteLine($"    {"rs2"   , -7}: {rs2}");
+                Console.WriteLine($"    {"imm"   , -7}: {imm12}");
             }
             return LibUtils.GetFromIndexLittle(imm12, 11, 5) + rs2 + rs1 + info.Funct3 + LibUtils.GetFromIndexLittle(imm12, 4, 0) + info.Opcode;
         }
@@ -122,27 +122,26 @@ namespace Assembler
                 case "la":
                     {
                         // la rd,symbol → ↓
-                        // lui rd, symbol[31:12] + 1
+                        // lui rd, symbol[31:12] + (1 (if symbol[11:0] < 0))
                         // addi rd, rd, symbol[11:0]
-                        //CheckTokensCount(mnem, ts.Count, 3);
-                        //string rd = GetRegisterIndex(ts[1]);
-                        //string symbol = ts[2];
-                        //symbol = StringToBin(symbol);
-                        //return [
-                        //    GetUtypeInst("lui", LibUtils.GetFromIndexLittle(symbol, 31, 12), rd),
-                        //    GetItypeInst("addi" , LibUtils.GetFromIndexLittle(symbol, 11, 0), rd, rd),
-                        //    ];
-
-                        // to account for the sign extension of symbol[11:0] in the addi instruction
-                        // TODO:
-                        //symbol = Convert.ToString(Convert.ToUInt32(symbol, 2) + (uint)(symbol[20] == '1' ? 1 << 12 : 0), 2).PadLeft(32, '0');
-
-                        // TODO: fix `la` instruction
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1]);
-                        string imm = ts[2];
-                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst("addi", imm, GetRegisterIndex("zero"), rd)];
+                        string symbol = ts[2];
+                        symbol = StringToBin(symbol);
+#if false
+                        // to account for the sign extension of symbol[11:0] in the addi instruction
+                        string imm12 = GetFromIndexLittle(symbol, 11, 0);
+                        string imm20_64 = zext(GetFromIndexLittle(symbol, 31, 12), 64);
+                        if (imm12[0] == '1')
+                            imm20_64 = StringToBin((Convert.ToInt64(imm20_64, 2) + 1).ToString());
+                        return [
+                            GetUtypeInst("lui", imm20_64, rd),
+                            GetItypeInst("addi" , imm12, rd, rd),
+                        ];
+#else
+                        symbol = LibUtils.GetFromIndexLittle(symbol, 11, 0);
+                        return [GetItypeInst("addi", symbol, GetRegisterIndex("zero"), rd)];
+#endif
                     }
                 case "addi":
                     {
@@ -830,7 +829,9 @@ namespace Assembler
         {
             return mnem switch
             {
-                //"la" => 8,
+#if false
+                "la" => 8,
+#endif
                 _ => 4,
             };
         }
