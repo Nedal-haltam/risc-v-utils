@@ -4,11 +4,12 @@ namespace Assembler
     public static class Assembler
     {
         static bool LOG_INSTRUCTIONS;
-        static string GetRtypeInst(string mnem, string rs1, string rs2, string rd)
+        static string SrcFilePath = "";
+        static string GetRtypeInst(string mnem, string rs1, string rs2, string rd, int line)
         {
             Shartilities.Assert(rs1.Length == 5 && rs2.Length == 5 && rd.Length == 5, $"invalid format in instruction {mnem}, lengths are: rs1={rs1.Length}, rs2={rs2.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported instruction {mnem}\n", 1);
             InstInfo info = Infos[mnem];
             if (LOG_INSTRUCTIONS)
             {
@@ -22,11 +23,11 @@ namespace Assembler
             }
             return info.Funct7 + rs2 + rs1 + info.Funct3 + rd + info.Opcode;
         }
-        static string GetItypeInst(string mnem, string imm12, string rs1, string rd)
+        static string GetItypeInst(string mnem, string imm12, string rs1, string rd, int line)
         {
             Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rd.Length == 5, $"invalid format in instruction {mnem}, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported instruction {mnem}\n", 1);
             InstInfo info = Infos[mnem];
             if (LOG_INSTRUCTIONS)
             {
@@ -40,11 +41,11 @@ namespace Assembler
             }
             return imm12 + rs1 + info.Funct3 + rd + info.Opcode;
         }
-        static string GetStypeInst(string mnem, string imm12, string rs1, string rs2)
+        static string GetStypeInst(string mnem, string imm12, string rs1, string rs2, int line)
         {
             Shartilities.Assert(imm12.Length == 12 && rs1.Length == 5 && rs2.Length == 5, $"invalid format in instruction {mnem}, lengths are: imm12={imm12.Length}, rs1={rs1.Length}, rs2={rs2.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported instruction {mnem}\n", 1);
             InstInfo info = Infos[mnem];
             if (LOG_INSTRUCTIONS)
             {
@@ -58,12 +59,12 @@ namespace Assembler
             }
             return LibUtils.GetFromIndexLittle(imm12, 11, 5) + rs2 + rs1 + info.Funct3 + LibUtils.GetFromIndexLittle(imm12, 4, 0) + info.Opcode;
         }
-        static string GetUtypeInst(string mnem, string imm20, string rd)
+        static string GetUtypeInst(string mnem, string imm20, string rd, int line)
         {
             InstInfo info = Infos[mnem];
             Shartilities.Assert(imm20.Length == 20 && rd.Length == 5, $"invalid format in instruction {mnem}, lengths are: imm20={imm20.Length}, rd={rd.Length}");
             if (!Infos.ContainsKey(mnem))
-                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported instruction {mnem}\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported instruction {mnem}\n", 1);
             if (LOG_INSTRUCTIONS)
             {
                 Console.WriteLine($"{mnem}:");
@@ -76,7 +77,7 @@ namespace Assembler
             return imm20 + rd + info.Opcode;
         }
 
-        static string GetRegisterIndex(string reg)
+        static string GetRegisterIndex(string reg, int line)
         {
             if (reg.StartsWith('$') || reg.StartsWith('x'))
             {
@@ -88,7 +89,7 @@ namespace Assembler
             {
                 return index.Item1;
             }
-            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid register {reg}\n", 1);
+            Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: invalid register {reg}\n", 1);
             return "";
         }
         static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid {mnem} instruction number of tokens is not {want}");
@@ -106,20 +107,20 @@ namespace Assembler
                         // lui rd,imm
                         // x[rd] = SignExtended(immediate[31:12] << 12)
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string imm = ts[2];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
-                        return [GetUtypeInst(mnem, imm, rd)];
+                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
                 case "auipc":
                     {
                         // auipc rd,imm
                         // x[rd] = pc + SignExtended(immediate[31:12] << 12)
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string imm = ts[2];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
-                        return [GetUtypeInst(mnem, imm, rd)];
+                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
                 case "la":
                     {
@@ -127,7 +128,7 @@ namespace Assembler
                         // lui rd, symbol[31:12] + (1 (if symbol[11:0] < 0))
                         // addi rd, rd, symbol[11:0]
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string symbol = ts[2];
                         symbol = StringToBin(symbol);
 #if false
@@ -142,7 +143,7 @@ namespace Assembler
                         ];
 #else
                         symbol = LibUtils.GetFromIndexLittle(symbol, 11, 0);
-                        return [GetItypeInst("addi", symbol, GetRegisterIndex("zero"), rd)];
+                        return [GetItypeInst("addi", symbol, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
 #endif
                     }
                 case "addi":
@@ -150,21 +151,21 @@ namespace Assembler
                         // addi rd,rs1,imm
                         // x[rd] = x[rs1] + SignExtended(immediate)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "li":
                     {
                         // li rd,immediate
                         // x[rd] = SignExtended(immediate)
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string imm = ts[2];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst("addi", imm, GetRegisterIndex("zero"), rd)];
+                        return [GetItypeInst("addi", imm, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
                         Shartilities.TODO("assembling load immediate");
                         string NumberBits = StringToBin(imm);
                         // load 64 bits to a register (lui, addi, ori)
@@ -174,16 +175,16 @@ namespace Assembler
                     {
                         // nop
                         // nothing
-                        return [GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero"), GetRegisterIndex("zero"))];
+                        return [GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "mv":
                     {
                         // mv rd,rs1
                         // x[rd] = x[rs1]
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        return [GetItypeInst("addi", zext("", 12), rs1, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetItypeInst("addi", zext("", 12), rs1, rd, inst.m_line)];
                     }
                 case "slti":
                     {
@@ -191,11 +192,11 @@ namespace Assembler
                         // x[rd] = x[rs1] <s SignExtended(immediate)
                         // x[rd] = (signed(x[rs1]) < signed(SignExtended(immediate))) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "sltiu":
                     {
@@ -204,53 +205,53 @@ namespace Assembler
                         // the difference is that the numbers are treated as unsigned instead
                         // x[rd] = (unsigned(x[rs1]) < unsigned(ZeroExtended(immediate))) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "xori":
                     {
                         // xori rd,rs1,imm
                         // x[rd] = x[rs1] ^ SignExtended(immediate)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "not":
                     {
                         // not rd,rs1
                         // x[rd] = x[rs1] ^ SignExtended(-1)
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rd = GetRegisterIndex(ts[1]);
-                        return [GetItypeInst("xori", sext("1", 12), rs1, rd)];
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        return [GetItypeInst("xori", sext("1", 12), rs1, rd, inst.m_line)];
                     }
                 case "ori":
                     {
                         // ori rd,rs1,imm
                         // x[rd] = x[rs1] | SignExtended(immediate)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "andi":
                     {
                         // andi rd,rs1,imm
                         // x[rd] = x[rs1] & SignExtended(immediate)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "slli":
                     {
@@ -259,11 +260,11 @@ namespace Assembler
                         // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
                         // but in RV32 the shamt is 5-bits
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "srli":
                     {
@@ -272,11 +273,11 @@ namespace Assembler
                         // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
                         // but in RV32 the shamt is 5-bits
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "srai":
                     {
@@ -285,22 +286,22 @@ namespace Assembler
                         // NOTE: in RV64, bit-25 in the instruction maching code is used to shamt[5] so the shamt in this case is 6-bits,
                         // but in RV32 the shamt is 5-bits
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string imm = ts[3];
                         imm = zext(GetFromIndexLittle(StringToBin(imm), 4, 0), 12);
                         imm = string.Concat(imm.AsSpan()[..1], "1", imm.AsSpan(2));
-                        return [GetItypeInst(mnem, imm, rs1, rd)];
+                        return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
                     }
                 case "add":
                     {
                         // add rd,rs1,rs2
                         // x[rd] = x[rs1] + x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
 
                     }
                 case "sub":
@@ -308,10 +309,10 @@ namespace Assembler
                         // sub rd,rs1,rs2
                         // x[rd] = x[rs1] - x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "sll":
                     {
@@ -320,10 +321,10 @@ namespace Assembler
                         // NOTE: Performs logical left shift on the value in register rs1 by the shift amount held in the
                         // ```lower 5 bits of register rs2```
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "slt":
                     {
@@ -331,10 +332,10 @@ namespace Assembler
                         // x[rd] = x[rs1] <s x[rs2]
                         // x[rd] = (signed(x[rs1]) < signed(x[rs2])) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "seq":
                     {
@@ -342,10 +343,10 @@ namespace Assembler
                         // x[rd] = x[rs1] == x[rs2]
                         // x[rd] = (x[rs1] == x[rs2]) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "sne":
                     {
@@ -353,26 +354,26 @@ namespace Assembler
                         // x[rd] = x[rs1] != x[rs2]
                         // x[rd] = (x[rs1] != x[rs2]) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "snez":
                     {
                         // snez rd,rs1
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        return [GetRtypeInst("sne", rs1, GetRegisterIndex("zero"), rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetRtypeInst("sne", rs1, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
                     }
                 case "seqz":
                     {
                         // snez rd,rs1
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        return [GetRtypeInst("seq", rs1, GetRegisterIndex("zero"), rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetRtypeInst("seq", rs1, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
                     }
                 case "sgt":
                     {
@@ -380,10 +381,10 @@ namespace Assembler
                         // x[rd] = x[rs1] >s x[rs2]
                         // x[rd] = (signed(x[rs1]) > signed(x[rs2])) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst("slt", rs2, rs1, rd)]; // flipped the operands
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst("slt", rs2, rs1, rd, inst.m_line)]; // flipped the operands
                     }
                 case "sltu":
                     {
@@ -391,20 +392,20 @@ namespace Assembler
                         // x[rd] = x[rs1] <u x[rs2]
                         // x[rd] = (unsigned(x[rs1]) < unsigned(x[rs2])) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "xor":
                     {
                         // xor rd,rs1,rs2
                         // x[rd] = x[rs1] ^ x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "srl":
                     {
@@ -413,10 +414,10 @@ namespace Assembler
                         // NOTE: Logical right shift on the value in register rs1 by the shift amount held in the
                         // ```lower 5 bits of register rs2```
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "sra":
                     {
@@ -425,102 +426,102 @@ namespace Assembler
                         // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
                         // lower 5 bits of register rs2
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "or":
                     {
                         // or rd,rs1,rs2
                         // x[rd] = x[rs1] | x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "and":
                     {
                         // and rd,rs1,rs2
                         // x[rd] = x[rs1] & x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "ecall":
                     {
                         // ecall
                         // RaiseException(EnvironmentCall)
-                        return [GetItypeInst(mnem, zext("", 12), GetRegisterIndex("zero"), GetRegisterIndex("zero"))];
+                        return [GetItypeInst(mnem, zext("", 12), GetRegisterIndex("zero", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "lb":
                     {
                         // lb rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][7:0])
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "lh":
                     {
                         // lh rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][15:0])
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "lw":
                     {
                         // lw rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][31:0])
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "ld":
                     {
                         // ld rd,offset(rs1)
                         // x[rd] = SignExtended(M[x[rs1] + SignExtended(offset)][63:0])
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "lbu":
                     {
                         // lbu rd,offset(rs1)
                         // x[rd] = ZeroExtended(M[x[rs1] + SignExtended(offset)][7:0])
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "lhu":
                     {
                         // lhu rd,offset(rs1)
                         // x[rd] = ZeroExtended(M[x[rs1] + SignExtended(offset)][15:0])
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "sb":
                     {
@@ -529,11 +530,11 @@ namespace Assembler
                         // NOTE: Store 8-bit, values from the
                         // ```low bits of register rs2 to memory.```
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs2 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "sh":
                     {
@@ -542,43 +543,43 @@ namespace Assembler
                         // NOTE: Store 16-bit, values from the
                         // ```low bits of register rs2 to memory.```
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs2 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "sw":
                     {
                         // sw rs2,offset(rs1)
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][31:0]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs2 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "sd":
                     {
                         // sd rs2,offset(rs1)
                         // M[x[rs1] + SignExtended(offset)] = x[rs2][63:0]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs2 = GetRegisterIndex(ts[1]);
+                        string rs2 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        string rs1 = GetRegisterIndex(ts[3]);
+                        string rs1 = GetRegisterIndex(ts[3], inst.m_line);
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "jal":
                     {
                         // jal rd,offset
                         // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        return [GetUtypeInst(mnem, offset, rd)];
+                        return [GetUtypeInst(mnem, offset, rd, inst.m_line)];
                     }
                 case "call":
                     {
@@ -588,7 +589,7 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 2);
                         string offset = ts[1];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        return [GetUtypeInst("jal", offset, GetRegisterIndex("ra"))];
+                        return [GetUtypeInst("jal", offset, GetRegisterIndex("ra", inst.m_line), inst.m_line)];
                     }
                 case "j":
                     {
@@ -598,7 +599,7 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 2);
                         string offset = ts[1];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        return [GetUtypeInst("jal", offset, GetRegisterIndex("zero"))];
+                        return [GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "jalr":
                     {
@@ -608,18 +609,18 @@ namespace Assembler
                         // x[rd] = t
                         // NOTE: the steps above are important and should be implemented exactly as shown
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd)];
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
                 case "ret":
                     {
                         // ret
                         // pc = ra
                         CheckTokensCount(mnem, ts.Count, 1);
-                        return [GetItypeInst("jalr", zext("", 12), GetRegisterIndex("ra"), GetRegisterIndex("zero"))];
+                        return [GetItypeInst("jalr", zext("", 12), GetRegisterIndex("ra", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "jr":
                     {
@@ -627,40 +628,40 @@ namespace Assembler
                         // pc = x[rs1]
                         // jr rs1 -> jalr x0,rs1,0
                         CheckTokensCount(mnem, ts.Count, 2);
-                        string rs1 = GetRegisterIndex(ts[1]);
-                        return [GetItypeInst("jalr", zext("", 12), rs1, GetRegisterIndex("zero"))];
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        return [GetItypeInst("jalr", zext("", 12), rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "beq":
                     {
                         // beq rs1,rs2,offset
                         // if (rs1 == rs2) pc += SignExtended(offset)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs1 = GetRegisterIndex(ts[1]);
-                        string rs2 = GetRegisterIndex(ts[2]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "beqz":
                     {
                         // beqz rs1,offset
                         // if (rs1 == rs2) pc += SignExtended(offset)
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero"))];
+                        return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "bne":
                     {
                         // bne rs1,rs2,offset
                         // if (rs1 != rs2) pc += SignExtended(offset)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs1 = GetRegisterIndex(ts[1]);
-                        string rs2 = GetRegisterIndex(ts[2]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "blt":
                     {
@@ -668,20 +669,20 @@ namespace Assembler
                         // if (rs1 <s rs2) pc += SignExtended(offset)
                         // if (signed(rs1) <s signed(rs2)) pc += SignExtended(offset)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs1 = GetRegisterIndex(ts[1]);
-                        string rs2 = GetRegisterIndex(ts[2]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "bltz":
                     {
                         // bltz rs1,offset
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero"))];
+                        return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "bge":
                     {
@@ -689,20 +690,20 @@ namespace Assembler
                         // if (rs1 >=s rs2) pc += SignExtended(offset)
                         // if (signed(rs1) >=s signed(rs2)) pc += SignExtended(offset)
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rs1 = GetRegisterIndex(ts[1]);
-                        string rs2 = GetRegisterIndex(ts[2]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2)];
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
                 case "bgez":
                     {
                         // bgez rs1,offset
                         CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[1]);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero"))];
+                        return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 // TODO: 1.50. bltu, 1.51. bgeu
                 case "mul":
@@ -710,34 +711,34 @@ namespace Assembler
                         // mul rd,rs1,rs2
                         // x[rd] = x[rs1] × x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "rem":
                     {
                         // rem rd,rs1,rs2
                         // x[rd] = x[rs1] %s x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "div":
                     {
                         // div rd,rs1,rs2
                         // x[rd] = x[rs1] %s x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1]);
-                        string rs1 = GetRegisterIndex(ts[2]);
-                        string rs2 = GetRegisterIndex(ts[3]);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd)];
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 default:
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid instruction mnemonic {mnem}\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{inst.m_line}:1: invalid instruction mnemonic {mnem}\n", 1);
                         return [];
                     }
             }
@@ -793,7 +794,7 @@ namespace Assembler
             List<(int, string)> TextSection = [];
 
             if (TextIndex == -1)
-                Shartilities.Log(Shartilities.LogType.ERROR, $"text directive doesn't exist\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:1:1: text directive doesn't exist\n", 1);
 
             if (DataIndex == -1)
             {
@@ -819,15 +820,15 @@ namespace Assembler
             if (TextSection.Count > 1 && TextSection[0].Item2 == ".globl main" && TextSection[1].Item2 == "main:")
                 TextSection.RemoveAt(0);
             else
-                Shartilities.Log(Shartilities.LogType.ERROR, $"main is not defined in the assembly program\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:1:1: main is not defined in the assembly program\n", 1);
 
             return (TextSection, DataSection);
         }
-        static string ParseLabel(string label)
+        static string ParseLabel(string label, int line)
         {
             label = label[..^1].Trim();
             if (label.Split(' ').Length > 1)
-                Shartilities.Log(Shartilities.LogType.ERROR, $"invalid label syntax {label}\n", 1);
+                Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: invalid label syntax {label}\n", 1);
             return label;
         }
         static uint GetInstructionSize(string mnem)
@@ -844,6 +845,7 @@ namespace Assembler
         {
             LOG_INSTRUCTIONS = LOG_INST_FLAG;
             string src = File.ReadAllText(FilePath);
+            SrcFilePath = FilePath;
 
             List<string> splitted = [.. src.Split('\n')];
             List<int> lines = [.. Enumerable.Range(1, splitted.Count)];
@@ -875,7 +877,7 @@ namespace Assembler
                 int ColonIndex = PossibleLabel.LastIndexOf(':');
                 if (ColonIndex == PossibleLabel.Length - 1)
                 {
-                    Labels.Add(ParseLabel(PossibleLabel), LabelAddress);
+                    Labels.Add(ParseLabel(PossibleLabel, LineNumber), LabelAddress);
                 }
                 else
                 {
@@ -904,43 +906,44 @@ namespace Assembler
             ulong CurrentDataAddress = 0;
             for (int i = 0; i < DataSection.Count; i++)
             {
-                string line = DataSection[i].Item2;
+                int line = DataSection[i].Item1;
+                string instruction = DataSection[i].Item2;
 
-                string PossibleLabel = line.Trim();
+                string PossibleLabel = instruction.Trim();
                 int ColonIndex = PossibleLabel.LastIndexOf(':');
                 if (ColonIndex == PossibleLabel.Length - 1)
                 {
-                    DataSectionAddresses.Add(ParseLabel(PossibleLabel), CurrentDataAddress);
+                    DataSectionAddresses.Add(ParseLabel(PossibleLabel, line), CurrentDataAddress);
                 }
-                else if (line == ".section .bss")
+                else if (instruction == ".section .bss")
                 {
                     continue;
                 }
                 else
                 {
-                    int index = line.IndexOf(' ');
+                    int index = instruction.IndexOf(' ');
                     if (index == -1)
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"invalid syntax in data section\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: invalid syntax in data section\n", 1);
 
-                    string Directive = line[..index];
+                    string Directive = instruction[..index];
                     if (Directive == ".space")
                     {
-                        List<string> data = [.. line[index..].Trim().Split(',')];
+                        List<string> data = [.. instruction[index..].Trim().Split(',')];
                         for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
                         p.DataMemoryValues.Add(Directive);
                         p.DataMemoryValues.AddRange(data);
                         if (data.Count == 0)
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"no expression was provided for .space directive\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: no expression was provided for .space directive\n", 1);
                         if (data.Count != 1)
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid number of expressions should be one for .space directive\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: invalid number of expressions should be one for .space directive\n", 1);
 
                         if (!ulong.TryParse(data[0], out ulong value))
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid expression in directive .spcace with the value {data[0]}\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: invalid expression in directive .spcace with the value {data[0]}\n", 1);
                         CurrentDataAddress += 1 * value;
                     }
                     else if (Directive == ".string")
                     {
-                        string StringLit = line[index..].Trim();
+                        string StringLit = instruction[index..].Trim();
                         if (StringLit.Length > 1 && StringLit[0] == '"' && StringLit[^1] == '"')
                         {
                             p.DataMemoryValues.Add(Directive);
@@ -963,7 +966,7 @@ namespace Assembler
                                     }
                                     else
                                     {
-                                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported escape character in string literal {StringLit}\n", 1);
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported escape character in string literal {StringLit}\n", 1);
                                     }
                                 }
                                 else
@@ -981,12 +984,12 @@ namespace Assembler
                         }
                         else
                         {
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"invalid string literal declaration: {StringLit}\n", 1);
+                            Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: invalid string literal declaration: {StringLit}\n", 1);
                         }
                     }
                     else if (Directive == ".word")
                     {
-                        List<string> data = [.. line[index..].Trim().Split(',')];
+                        List<string> data = [.. instruction[index..].Trim().Split(',')];
                         for (int j = 0; j < data.Count; j++) data[j] = data[j].Trim();
                         p.DataMemoryValues.Add(Directive);
                         p.DataMemoryValues.Add(data.Count.ToString());
@@ -995,7 +998,7 @@ namespace Assembler
                     }
                     else
                     {
-                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported data memory directive {Directive}\n", 1);
+                        Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported data memory directive {Directive}\n", 1);
                     }
                 }
             }

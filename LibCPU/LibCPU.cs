@@ -764,9 +764,9 @@ namespace LibCPU
             if (OutPutFilePath != null)
             {
                 StringBuilder sb = new();
+                sb.Append($"Number of cycles consumed : {CyclesConsumed,10}\n");
                 sb.Append(GetRegs(RegisterFile.Registers));
                 sb.Append(GetDM(DataMemory.GetMemory()));
-                sb.Append($"Number of cycles consumed : {CyclesConsumed,10}\n");
                 File.WriteAllText(OutPutFilePath, sb.ToString());
                 Shartilities.Log(Shartilities.LogType.INFO, $"Generated CAS output of singlecyle in path {OutPutFilePath} successfully\n");
             }
