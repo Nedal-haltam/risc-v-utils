@@ -741,10 +741,30 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[3], inst.m_line);
                         return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
+                case "remu":
+                    {
+                        // remu rd,rs1,rs2
+                        // x[rd] = x[rs1] %u x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
                 case "div":
                     {
                         // div rd,rs1,rs2
                         // x[rd] = x[rs1] %s x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "divu":
+                    {
+                        // divu rd,rs1,rs2
+                        // x[rd] = x[rs1] /u x[rs2]
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
@@ -806,12 +826,11 @@ namespace Assembler
         }
         static uint GetInstructionSize(string mnem)
         {
-            switch (mnem.ToLower())
+            return mnem.ToLower() switch
             {
-                case "li":
-                    return 32;
-                default:
-                    return 4;
+                "li" => 32,
+                "la" => 8,
+                _ => 4,
             };
         }
         public static Program AssembleProgram(string FilePath, bool LOG_INST_FLAG)
