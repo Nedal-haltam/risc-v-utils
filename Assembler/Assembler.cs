@@ -141,20 +141,15 @@ namespace Assembler
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string symbol = ts[2];
                         symbol = StringToBin(symbol);
-#if false
                         // to account for the sign extension of symbol[11:0] in the addi instruction
                         string imm12 = GetFromIndexLittle(symbol, 11, 0);
-                        string imm20_64 = zext(GetFromIndexLittle(symbol, 31, 12), 64);
+                        string imm20_64 = GetFromIndexLittle(symbol, 31, 12);
                         if (imm12[0] == '1')
-                            imm20_64 = StringToBin((Convert.ToInt64(imm20_64, 2) + 1).ToString());
+                            imm20_64 = GetFromIndexLittle(StringToBin((Convert.ToInt64(zext(imm20_64, 64), 2) + 1).ToString()), 19, 0);
                         return [
-                            GetUtypeInst("lui", imm20_64, rd),
-                            GetItypeInst("addi" , imm12, rd, rd),
+                            GetUtypeInst("lui", imm20_64, rd, inst.m_line),
+                            GetItypeInst("addi" , imm12, rd, rd, inst.m_line),
                         ];
-#else
-                        symbol = LibUtils.GetFromIndexLittle(symbol, 11, 0);
-                        return [GetItypeInst("addi", symbol, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
-#endif
                     }
                 case "addi":
                     {
