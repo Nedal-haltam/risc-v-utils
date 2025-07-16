@@ -329,6 +329,15 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[3], inst.m_line);
                         return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
+                case "neg":
+                    {
+                        // neg rd,rs2
+                        // x[rd] = -x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetRtypeInst("sub", GetRegisterIndex("zero", inst.m_line), rs2, rd, inst.m_line)];
+                    }
                 case "sll":
                     {
                         // sll rd,rs1,rs2
