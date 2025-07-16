@@ -696,6 +696,32 @@ namespace LibCPU
                                     }
                                     break;
                                 }
+                            case "110":
+                                {
+                                    long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
+                                    if ((ulong)RegisterFile[rs1] < (ulong)RegisterFile[rs2])
+                                    {
+                                        PC += offset;
+                                    }
+                                    else
+                                    {
+                                        PC += 4;
+                                    }
+                                    break;
+                                }
+                            case "111":
+                                {
+                                    long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
+                                    if ((ulong)RegisterFile[rs1] >= (ulong)RegisterFile[rs2])
+                                    {
+                                        PC += offset;
+                                    }
+                                    else
+                                    {
+                                        PC += 4;
+                                    }
+                                    break;
+                                }
                             default:
                                 {
                                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);

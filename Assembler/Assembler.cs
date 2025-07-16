@@ -724,6 +724,30 @@ namespace Assembler
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
                         return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
+                case "bltu":
+                    {
+                        // bltu rs1,rs2,offset
+                        // if (rs1 <u rs2) pc += sext(offset)
+                        // if (unsigned(rs1) <u unsigned(rs2)) pc += SignExtended(offset)
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
+                        string offset = ts[3];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                    }
+                case "bgeu":
+                    {
+                        // bgeu rs1,rs2,offset
+                        // if (rs1 >=u rs2) pc += sext(offset)
+                        // if (unsigned(rs1) >=u unsigned(rs2)) pc += SignExtended(offset)
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
+                        string offset = ts[3];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                    }
                 // TODO: 1.50. bltu, 1.51. bgeu
                 case "mul":
                     {
