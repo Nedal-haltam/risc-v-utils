@@ -249,7 +249,7 @@ namespace LibCPU
                         {
                             case "0000000":
                                 {
-                                    RegisterFile[rd] = (UInt64)RegisterFile[rs1] < (UInt64)RegisterFile[rs2] ? 1 : 0;
+                                    RegisterFile[rd] = (ulong)RegisterFile[rs1] < (ulong)RegisterFile[rs2] ? 1 : 0;
                                     PC += 4;
                                     break;
                                 }
@@ -303,6 +303,14 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
+                            case "0000001":
+                                {
+                                    if (RegisterFile[rs2] == 0)
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"divide by zero exception\n", 1);
+                                    RegisterFile[rd] = (long)((ulong)RegisterFile[rs1] / (ulong)RegisterFile[rs2]);
+                                    PC += 4;
+                                    break;
+                                }
                             default:
                                 {
                                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
@@ -345,6 +353,12 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
+                            case "0000001":
+                                {
+                                    RegisterFile[rd] = (long)((ulong)RegisterFile[rs1] % (ulong)RegisterFile[rs2]);
+                                    PC += 4;
+                                    break;
+                                }
                             default:
                                 {
                                     Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct7 {Funct7}\n", 1);
@@ -383,7 +397,7 @@ namespace LibCPU
                 case "011":
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
-                        RegisterFile[rd] = (UInt64)RegisterFile[rs1] < (UInt64)imm ? 1 : 0;
+                        RegisterFile[rd] = (ulong)RegisterFile[rs1] < (ulong)imm ? 1 : 0;
                         PC += 4;
                         break;
                     }
