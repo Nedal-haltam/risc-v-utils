@@ -20,7 +20,7 @@ namespace LibCPU
             string zero = zext("", 64);
             for (int i = 0; i < 32; i++) Registers.Add(zero);
         }
-        public long this[int index]
+        public readonly long this[int index]
         {
             get
             {
@@ -35,7 +35,7 @@ namespace LibCPU
             }
         }
     }
-    public struct Memory
+    public readonly struct Memory
     {
         // list of byte in base-2
         private readonly List<string> m_Memory;
@@ -59,24 +59,24 @@ namespace LibCPU
             string zero = zext("", 8);
             for (uint i = 0; i < DM_SIZE - dmcount; i++) m_Memory.Add(zero);
         }
-        public void Clear()
+        public readonly void Clear()
         {
             m_Memory.Clear();
             for (int i = 0; i < m_DM_SIZE; i++) m_Memory.Add("0");
         }
-        public List<string> GetMemory() => m_Memory;
-        public string GetByte(int Address)
+        public readonly List<string> GetMemory() => m_Memory;
+        public readonly string GetByte(int Address)
         {
             return m_Memory[Address];
         }
-        public string GetHalfWord(int Address)
+        public readonly string GetHalfWord(int Address)
         {
             string ret = "";
             for (int i = 0; i < 2; i++)
                 ret = m_Memory[Address + i] + ret;
             return ret;
         }
-        public string GetWord(int Address)
+        public readonly string GetWord(int Address)
         {
             string ret = "";
             for (int i = 0; i < 4; i++)
@@ -84,28 +84,28 @@ namespace LibCPU
 
             return ret;
         }
-        public string GetDoubleWord(int Address)
+        public readonly string GetDoubleWord(int Address)
         {
             string ret = "";
             for (int i = 0; i < 8; i++)
                 ret = m_Memory[Address + i] + ret;
             return ret;
         }
-        public void SetByte(int Address, string BinaryByte)
+        public readonly void SetByte(int Address, string BinaryByte)
         {
             m_Memory[Address] = GetFromIndexLittle(BinaryByte, 7, 0);
         }
-        public void SetHalfWord(int Address, string BinaryHalfWord)
+        public readonly void SetHalfWord(int Address, string BinaryHalfWord)
         {
             for (int i = 0; i < 2; i++)
                 m_Memory[Address + i] = GetFromIndexLittle(BinaryHalfWord, 8 * (i + 1) - 1, 8 * i);
         }
-        public void SetWord(int Address, string BinaryWord)
+        public readonly void SetWord(int Address, string BinaryWord)
         {
             for (int i = 0; i < 4; i++)
                 m_Memory[Address + i] = GetFromIndexLittle(BinaryWord, 8 * (i + 1) - 1, 8 * i);
         }
-        public void SetDoubleWord(int Address, string BinaryDoubleWord)
+        public readonly void SetDoubleWord(int Address, string BinaryDoubleWord)
         {
             for (int i = 0; i < 8; i++)
                 m_Memory[Address + i] = GetFromIndexLittle(BinaryDoubleWord, 8 * (i + 1) - 1, 8 * i);
@@ -380,49 +380,49 @@ namespace LibCPU
             string Funct7Like = GetFromIndexLittle(mc, 31, 25);
             switch (Funct3)
             {
-                case "000":
+                case "000": // "addi"
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] + imm;
                         PC += 4;
                         break;
                     }
-                case "010":
+                case "010": // "slti"
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] < imm ? 1 : 0;
                         PC += 4;
                         break;
                     }
-                case "011":
+                case "011": // "sltiu"
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = (ulong)RegisterFile[rs1] < (ulong)imm ? 1 : 0;
                         PC += 4;
                         break;
                     }
-                case "100":
+                case "100": // "xori"
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] ^ imm;
                         PC += 4;
                         break;
                     }
-                case "110":
+                case "110": // "ori"
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] | imm;
                         PC += 4;
                         break;
                     }
-                case "111":
+                case "111": // "andi"
                     {
                         long imm = Convert.ToInt64(sext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] & imm;
                         PC += 4;
                         break;
                     }
-                case "001":
+                case "001": // "slli"
                     {
                         long imm = Convert.ToInt64(zext(imm12, 64), 2);
                         RegisterFile[rd] = RegisterFile[rs1] << (int)imm;
@@ -433,14 +433,14 @@ namespace LibCPU
                     {
                         switch (Funct7Like)
                         {
-                            case "0000000":
+                            case "0000000": // "srli"
                                 {
                                     long imm = Convert.ToInt64(zext(imm12, 64), 2);
                                     RegisterFile[rd] = RegisterFile[rs1] >>> (int)imm;
                                     PC += 4;
                                     break;
                                 }
-                            case "0100000":
+                            case "0100000": // "srai"
                                 {
                                     long imm = Convert.ToInt64(zext(imm12, 64), 2);
                                     RegisterFile[rd] = RegisterFile[rs1] >> (int)imm;
@@ -483,43 +483,55 @@ namespace LibCPU
                         ConsumeIType(mc, rs1, imm12, rd);
                         break;
                     }
-                case "1110011":
+                case "1110011": // "ecall"
                     {
-                        long syscall = RegisterFile[REG_LIST["a7"].Item2];
-                        if (syscall == 64)
+                        switch (Funct3)
                         {
-                            long FileDescriptor = RegisterFile[REG_LIST["a0"].Item2];
-                            long StringLitAddress = RegisterFile[REG_LIST["a1"].Item2];
-                            long StringLitLength = RegisterFile[REG_LIST["a2"].Item2];
-                            StringBuilder buffer = new();
-                            if (FileDescriptor == 1)
-                            {
-                                while (StringLitLength-- > 0)
+                            case "000":
                                 {
-                                    buffer.Append((char)Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2));
-                                    StringLitAddress++;
+                                    long syscall = RegisterFile[REG_LIST["a7"].Item2];
+                                    if (syscall == 64)
+                                    {
+                                        long FileDescriptor = RegisterFile[REG_LIST["a0"].Item2];
+                                        long StringLitAddress = RegisterFile[REG_LIST["a1"].Item2];
+                                        long StringLitLength = RegisterFile[REG_LIST["a2"].Item2];
+                                        StringBuilder buffer = new();
+                                        if (FileDescriptor == 1)
+                                        {
+                                            while (StringLitLength-- > 0)
+                                            {
+                                                buffer.Append((char)Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2));
+                                                StringLitAddress++;
+                                            }
+                                            Console.Write(buffer.ToString());
+                                        }
+                                        else
+                                        {
+                                            Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported file descriptor {FileDescriptor}\n", 1);
+                                        }
+                                    }
+                                    else if (syscall == 93)
+                                    {
+                                        int ExitCode = (int)RegisterFile[REG_LIST["a0"].Item2];
+                                        if (OutputFilePath != null)
+                                            GenerateRegFileDMStates(OutputFilePath);
+                                        if (ExitCode < 0)
+                                            Shartilities.Log(Shartilities.LogType.ERROR, $"exit code cannot be negative\n", 1);
+                                        Environment.Exit(ExitCode);
+                                    }
+                                    else
+                                    {
+                                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported syscall {syscall}\n", 1);
+                                    }
+                                    PC += 4;
+                                    break;
                                 }
-                                Console.Write(buffer.ToString());
-                            }
-                            else
-                            {
-                                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported file descriptor {FileDescriptor}\n", 1);
-                            }
+                            default:
+                                {
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
+                                    break;
+                                }
                         }
-                        else if (syscall == 93)
-                        {
-                            int ExitCode = (int)RegisterFile[REG_LIST["a0"].Item2];
-                            if (OutputFilePath != null)
-                                GenerateRegFileDMStates(OutputFilePath);
-                            if (ExitCode < 0)
-                                Shartilities.Log(Shartilities.LogType.ERROR, $"exit code cannot be negative\n", 1);
-                            Environment.Exit(ExitCode);
-                        }
-                        else
-                        {
-                            Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported syscall {syscall}\n", 1);
-                        }
-                        PC += 4;
                         break;
                     }
                 case "0000011":
@@ -527,7 +539,7 @@ namespace LibCPU
                         (int rs1, string imm12, int rd) = GetItypeInst(mc);
                         switch (Funct3)
                         {
-                            case "000":
+                            case "000": // "lb"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = DataMemory.GetByte((int)Address);
@@ -535,7 +547,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "001":
+                            case "001": // "lh"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = DataMemory.GetHalfWord((int)Address);
@@ -543,7 +555,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "010":
+                            case "010": // "lw"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = DataMemory.GetWord((int)Address);
@@ -551,7 +563,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "011":
+                            case "011": // "ld"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = DataMemory.GetDoubleWord((int)Address);
@@ -559,7 +571,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "100":
+                            case "100": // "lbu"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = DataMemory.GetByte((int)Address);
@@ -567,7 +579,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "101":
+                            case "101": // "lhu"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = DataMemory.GetHalfWord((int)Address);
@@ -583,13 +595,25 @@ namespace LibCPU
                         }
                         break;
                     }
-                case "1110111":
+                case "1110111": // "jalr"
                     {
-                        (int rs1, string imm12, int rd) = GetItypeInst(mc);
-                        long t = PC + 4;
-                        long imm = Convert.ToInt64(sext(imm12, 64), 2);
-                        PC = RegisterFile[rs1] + (imm & ~1);
-                        RegisterFile[rd] = t;
+                        switch (Funct3)
+                        {
+                            case "000":
+                                {
+                                    (int rs1, string imm12, int rd) = GetItypeInst(mc);
+                                    long t = PC + 4;
+                                    long imm = Convert.ToInt64(sext(imm12, 64), 2);
+                                    PC = RegisterFile[rs1] + (imm & ~1);
+                                    RegisterFile[rd] = t;
+                                    break;
+                                }
+                            default:
+                                {
+                                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported Funct3 {Funct3}\n", 1);
+                                    break;
+                                }
+                        }
                         break;
                     }
                 // end of I-TYPE instructions
@@ -599,7 +623,7 @@ namespace LibCPU
                         (int rs1, int rs2, string imm12) = GetStypeInst(mc);
                         switch (Funct3)
                         {
-                            case "000":
+                            case "000": // "sb"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 7, 0);
@@ -607,7 +631,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "001":
+                            case "001": // "sh"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 15, 0);
@@ -615,7 +639,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "010":
+                            case "010": // "sw"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 31, 0);
@@ -623,7 +647,7 @@ namespace LibCPU
                                     PC += 4;
                                     break;
                                 }
-                            case "011":
+                            case "011": // "sd"
                                 {
                                     long Address = RegisterFile[rs1] + Convert.ToInt64(sext(imm12, 64), 2);
                                     string value = GetFromIndexLittle(LongToBin(RegisterFile[rs2]), 63, 0);
@@ -644,7 +668,7 @@ namespace LibCPU
                         (int rs1, int rs2, string imm12) = GetStypeInst(mc);
                         switch (Funct3)
                         {
-                            case "000":
+                            case "000": // "beq"
                                 {
                                     long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
                                     if (RegisterFile[rs1] == RegisterFile[rs2])
@@ -657,7 +681,7 @@ namespace LibCPU
                                     }
                                     break;
                                 }
-                            case "001":
+                            case "001": // "bne"
                                 {
                                     long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
                                     if (RegisterFile[rs1] != RegisterFile[rs2])
@@ -670,7 +694,7 @@ namespace LibCPU
                                     }
                                     break;
                                 }
-                            case "100":
+                            case "100": // "blt"
                                 {
                                     long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
                                     if (RegisterFile[rs1] < RegisterFile[rs2])
@@ -683,7 +707,7 @@ namespace LibCPU
                                     }
                                     break;
                                 }
-                            case "101":
+                            case "101": // "bge"
                                 {
                                     long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
                                     if (RegisterFile[rs1] >= RegisterFile[rs2])
@@ -696,7 +720,7 @@ namespace LibCPU
                                     }
                                     break;
                                 }
-                            case "110":
+                            case "110": // "bltu"
                                 {
                                     long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
                                     if ((ulong)RegisterFile[rs1] < (ulong)RegisterFile[rs2])
@@ -709,7 +733,7 @@ namespace LibCPU
                                     }
                                     break;
                                 }
-                            case "111":
+                            case "111": // "bgeu"
                                 {
                                     long offset = Convert.ToInt64(sext(imm12, 64), 2) << 1;
                                     if ((ulong)RegisterFile[rs1] >= (ulong)RegisterFile[rs2])
@@ -732,25 +756,25 @@ namespace LibCPU
                     }
                 // end of S-TYPE instructions
                 // start of U-TYPE instructions
-                case "0110111":
+                case "0110111": // "lui"
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        imm20 = imm20 + zext("", 12);
+                        imm20 += zext("", 12);
                         long imm = Convert.ToInt64(sext(imm20, 64), 2);
                         RegisterFile[rd] = imm;
                         PC += 4;
                         break;
                     }
-                case "0010111":
+                case "0010111": // "auipc"
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
-                        imm20 = imm20 + zext("", 12);
+                        imm20 += zext("", 12);
                         long imm = Convert.ToInt64(sext(imm20, 64), 2);
                         RegisterFile[rd] = PC + imm;
                         PC += 4;
                         break;
                     }
-                case "1111111":
+                case "1111111": // "jal"
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
                         long imm = Convert.ToInt64(sext(imm20, 64), 2) << 1;
@@ -758,7 +782,7 @@ namespace LibCPU
                         PC += imm;
                         break;
                     }
-                case "1111110":
+                case "1111110": // "addi20u"
                     {
                         (int rd, string imm20) = GetUtypeInst(mc);
                         long imm = Convert.ToInt64(zext(imm20, 64), 2);
