@@ -462,6 +462,43 @@ namespace LibCPU
                     }
             }
         }
+        static void ECALL()
+        {
+            long syscall = RegisterFile[REG_LIST["a7"].Item2];
+            if (syscall == 64)
+            {
+                long FileDescriptor = RegisterFile[REG_LIST["a0"].Item2];
+                long StringLitAddress = RegisterFile[REG_LIST["a1"].Item2];
+                long StringLitLength = RegisterFile[REG_LIST["a2"].Item2];
+                StringBuilder buffer = new();
+                if (FileDescriptor == 1)
+                {
+                    while (StringLitLength-- > 0)
+                    {
+                        buffer.Append((char)Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2));
+                        StringLitAddress++;
+                    }
+                    Console.Write(buffer.ToString());
+                }
+                else
+                {
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported file descriptor {FileDescriptor}\n", 1);
+                }
+            }
+            else if (syscall == 93)
+            {
+                int ExitCode = (int)RegisterFile[REG_LIST["a0"].Item2];
+                if (OutputFilePath != null)
+                    GenerateRegFileDMStates(OutputFilePath);
+                if (ExitCode < 0)
+                    Shartilities.Log(Shartilities.LogType.ERROR, $"exit code cannot be negative\n", 1);
+                Environment.Exit(ExitCode);
+            }
+            else
+            {
+                Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported syscall {syscall}\n", 1);
+            }
+        }
         static void ConsumeInstruction(string mc)
         {
             string opcode = GetFromIndexLittle(mc, 6, 0);
@@ -489,40 +526,7 @@ namespace LibCPU
                         {
                             case "000":
                                 {
-                                    long syscall = RegisterFile[REG_LIST["a7"].Item2];
-                                    if (syscall == 64)
-                                    {
-                                        long FileDescriptor = RegisterFile[REG_LIST["a0"].Item2];
-                                        long StringLitAddress = RegisterFile[REG_LIST["a1"].Item2];
-                                        long StringLitLength = RegisterFile[REG_LIST["a2"].Item2];
-                                        StringBuilder buffer = new();
-                                        if (FileDescriptor == 1)
-                                        {
-                                            while (StringLitLength-- > 0)
-                                            {
-                                                buffer.Append((char)Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2));
-                                                StringLitAddress++;
-                                            }
-                                            Console.Write(buffer.ToString());
-                                        }
-                                        else
-                                        {
-                                            Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported file descriptor {FileDescriptor}\n", 1);
-                                        }
-                                    }
-                                    else if (syscall == 93)
-                                    {
-                                        int ExitCode = (int)RegisterFile[REG_LIST["a0"].Item2];
-                                        if (OutputFilePath != null)
-                                            GenerateRegFileDMStates(OutputFilePath);
-                                        if (ExitCode < 0)
-                                            Shartilities.Log(Shartilities.LogType.ERROR, $"exit code cannot be negative\n", 1);
-                                        Environment.Exit(ExitCode);
-                                    }
-                                    else
-                                    {
-                                        Shartilities.Log(Shartilities.LogType.ERROR, $"unsupported syscall {syscall}\n", 1);
-                                    }
+                                    ECALL();
                                     PC += 4;
                                     break;
                                 }

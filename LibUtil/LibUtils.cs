@@ -153,15 +153,20 @@ public static class LibUtils
         }
     }
     public static string LongToBin(long NumberLiteral) => zext(Convert.ToString(NumberLiteral, 2), 64);
+#pragma warning disable IDE1006 // Naming Styles
     public static string sext(string imm, int length) => imm.PadLeft(length, imm[0]);
     public static string zext(string imm, int length) => imm.PadLeft(length, '0');
+#pragma warning restore IDE1006 // Naming Styles
     public static List<string> GetIM_INIT(List<string> MachinceCodes, List<Instruction> Instructions)
     {
+        Shartilities.UNUSED(MachinceCodes);
+        Shartilities.UNUSED(Instructions);
         Shartilities.TODO("GetIM_INIT is not implemented");
         return [];
     }
     public static List<string> GetDM_INIT(List<string> DataMemoryValues)
     {
+        Shartilities.UNUSED(DataMemoryValues);
         Shartilities.TODO("GetDM_INIT is not implemented");
         return [];
     }
