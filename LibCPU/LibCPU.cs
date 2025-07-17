@@ -169,19 +169,19 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "add"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] + RegisterFile[rs2];
                                     PC += 4;
                                     break;
                                 }
-                            case "0110000":
+                            case "0110000": // "sub"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] - RegisterFile[rs2];
                                     PC += 4;
                                     break;
                                 }
-                            case "0000001":
+                            case "0000001": // "mul"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] * RegisterFile[rs2];
                                     PC += 4;
@@ -199,7 +199,7 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "sll"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] << ((int)(RegisterFile[rs2] & 0x1F));
                                     PC += 4;
@@ -217,19 +217,19 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "slt"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] < RegisterFile[rs2] ? 1 : 0;
                                     PC += 4;
                                     break;
                                 }
-                            case "0000001":
+                            case "0000001": // "seq"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] == RegisterFile[rs2] ? 1 : 0;
                                     PC += 4;
                                     break;
                                 }
-                            case "0000010":
+                            case "0000010": // "sne"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] != RegisterFile[rs2] ? 1 : 0;
                                     PC += 4;
@@ -247,7 +247,7 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "sltu"
                                 {
                                     RegisterFile[rd] = (ulong)RegisterFile[rs1] < (ulong)RegisterFile[rs2] ? 1 : 0;
                                     PC += 4;
@@ -265,13 +265,13 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "xor"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] ^ RegisterFile[rs2];
                                     PC += 4;
                                     break;
                                 }
-                            case "0000001":
+                            case "0000001": // "div"
                                 {
                                     if (RegisterFile[rs2] == 0)
                                         Shartilities.Log(Shartilities.LogType.ERROR, $"divide by zero exception\n", 1);
@@ -291,19 +291,19 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "srl"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] >>> ((int)(RegisterFile[rs2] & 0x1F));
                                     PC += 4;
                                     break;
                                 }
-                            case "0100000":
+                            case "0100000": // "sra"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] >> ((int)(RegisterFile[rs2] & 0x1F));
                                     PC += 4;
                                     break;
                                 }
-                            case "0000001":
+                            case "0000001": // "divu"
                                 {
                                     if (RegisterFile[rs2] == 0)
                                         Shartilities.Log(Shartilities.LogType.ERROR, $"divide by zero exception\n", 1);
@@ -323,13 +323,13 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "or"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] | RegisterFile[rs2];
                                     PC += 4;
                                     break;
                                 }
-                            case "0000001":
+                            case "0000001": // "rem"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] % RegisterFile[rs2];
                                     PC += 4;
@@ -347,13 +347,13 @@ namespace LibCPU
                     {
                         switch (Funct7)
                         {
-                            case "0000000":
+                            case "0000000": // "and"
                                 {
                                     RegisterFile[rd] = RegisterFile[rs1] & RegisterFile[rs2];
                                     PC += 4;
                                     break;
                                 }
-                            case "0000001":
+                            case "0000001": // "remu"
                                 {
                                     RegisterFile[rd] = (long)((ulong)RegisterFile[rs1] % (ulong)RegisterFile[rs2]);
                                     PC += 4;

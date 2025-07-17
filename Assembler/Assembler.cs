@@ -102,55 +102,190 @@ namespace Assembler
             string mnem = ts[0].ToLower();
             switch (mnem)
             {
-                case "lui":
+                // start of R-TYPE instructions
+                case "add":
                     {
-                        // lui rd,imm
-                        // x[rd] = SignExtended(immediate[31:12] << 12)
-                        CheckTokensCount(mnem, ts.Count, 3);
+                        // add rd,rs1,rs2
+                        // x[rd] = x[rs1] + x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string imm = ts[2];
-                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
-                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+
                     }
-                case "addi20u": // user defined function
+                case "sub":
                     {
-                        // addi20u rd,imm
-                        // x[rd] = x[rd] + ZeroExtended(imm[19:0])
-                        CheckTokensCount(mnem, ts.Count, 3);
+                        // sub rd,rs1,rs2
+                        // x[rd] = x[rs1] - x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string imm = ts[2];
-                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 19, 0);
-                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
-                case "auipc":
+                case "mul":
                     {
-                        // auipc rd,imm
-                        // x[rd] = pc + SignExtended(immediate[31:12] << 12)
-                        CheckTokensCount(mnem, ts.Count, 3);
+                        // mul rd,rs1,rs2
+                        // x[rd] = x[rs1] × x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string imm = ts[2];
-                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
-                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
-                case "la":
+                case "sll":
                     {
-                        // la rd,symbol → ↓
-                        // lui rd, symbol[31:12] + (1 (if symbol[11:0] < 0))
-                        // addi rd, rd, symbol[11:0]
-                        CheckTokensCount(mnem, ts.Count, 3);
+                        // sll rd,rs1,rs2
+                        // x[rd] = x[rs1] << x[rs2]
+                        // NOTE: Performs logical left shift on the value in register rs1 by the shift amount held in the
+                        // ```lower 5 bits of register rs2```
+                        CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string symbol = ts[2];
-                        symbol = StringToBin(symbol);
-                        // to account for the sign extension of symbol[11:0] in the addi instruction
-                        string imm12 = GetFromIndexLittle(symbol, 11, 0);
-                        string imm20_64 = GetFromIndexLittle(symbol, 31, 12);
-                        if (imm12[0] == '1')
-                            imm20_64 = GetFromIndexLittle(StringToBin((Convert.ToInt64(zext(imm20_64, 64), 2) + 1).ToString()), 19, 0);
-                        return [
-                            GetUtypeInst("lui", imm20_64, rd, inst.m_line),
-                            GetItypeInst("addi" , imm12, rd, rd, inst.m_line),
-                        ];
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
+                case "slt":
+                    {
+                        // slt rd,rs1,rs2
+                        // x[rd] = x[rs1] <s x[rs2]
+                        // x[rd] = (signed(x[rs1]) < signed(x[rs2])) ? 1 : 0
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "seq":
+                    {
+                        // seq rd,rs1,rs2
+                        // x[rd] = x[rs1] == x[rs2]
+                        // x[rd] = (x[rs1] == x[rs2]) ? 1 : 0
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "sne":
+                    {
+                        // sne rd,rs1,rs2
+                        // x[rd] = x[rs1] != x[rs2]
+                        // x[rd] = (x[rs1] != x[rs2]) ? 1 : 0
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "sltu":
+                    {
+                        // sltu rd,rs1,rs2
+                        // x[rd] = x[rs1] <u x[rs2]
+                        // x[rd] = (unsigned(x[rs1]) < unsigned(x[rs2])) ? 1 : 0
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "xor":
+                    {
+                        // xor rd,rs1,rs2
+                        // x[rd] = x[rs1] ^ x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "div":
+                    {
+                        // div rd,rs1,rs2
+                        // x[rd] = x[rs1] %s x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "srl":
+                    {
+                        // srl rd,rs1,rs2
+                        // x[rd] = x[rs1] >>u x[rs2]
+                        // NOTE: Logical right shift on the value in register rs1 by the shift amount held in the
+                        // ```lower 5 bits of register rs2```
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "sra":
+                    {
+                        // sra rd,rs1,rs2
+                        // x[rd] = x[rs1] >>s x[rs2]
+                        // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
+                        // lower 5 bits of register rs2
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "divu":
+                    {
+                        // divu rd,rs1,rs2
+                        // x[rd] = x[rs1] /u x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "or":
+                    {
+                        // or rd,rs1,rs2
+                        // x[rd] = x[rs1] | x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "rem":
+                    {
+                        // rem rd,rs1,rs2
+                        // x[rd] = x[rs1] %s x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "and":
+                    {
+                        // and rd,rs1,rs2
+                        // x[rd] = x[rs1] & x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                case "remu":
+                    {
+                        // remu rd,rs1,rs2
+                        // x[rd] = x[rs1] %u x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
+                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                    }
+                // end of R-TYPE instructions
+                // start of I-TYPE instructions
                 case "addi":
                     {
                         // addi rd,rs1,imm
@@ -161,40 +296,6 @@ namespace Assembler
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
                         return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
-                    }
-                case "li":
-                    {
-                        // li rd,immediate
-                        // x[rd] = SignExtended(immediate)
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string imm = ts[2];
-                        imm = StringToBin(imm);
-                        return [
-                                GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero", inst.m_line), rd, inst.m_line),
-                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 63, 44), rd, inst.m_line),
-                                GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
-                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 43, 24), rd, inst.m_line),
-                                GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
-                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 23, 4), rd, inst.m_line),
-                                GetItypeInst("slli", "000000000100", rd, rd, inst.m_line),
-                                GetUtypeInst("addi20u", zext(GetFromIndexLittle(imm, 3, 0), 20), rd, inst.m_line),
-                            ];
-                    }
-                case "nop":
-                    {
-                        // nop
-                        // nothing
-                        return [GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
-                    }
-                case "mv":
-                    {
-                        // mv rd,rs1
-                        // x[rd] = x[rs1]
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        return [GetItypeInst("addi", zext("", 12), rs1, rd, inst.m_line)];
                     }
                 case "slti":
                     {
@@ -231,15 +332,6 @@ namespace Assembler
                         string imm = ts[3];
                         imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 11, 0);
                         return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
-                    }
-                case "not":
-                    {
-                        // not rd,rs1
-                        // x[rd] = x[rs1] ^ SignExtended(-1)
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        return [GetItypeInst("xori", sext("1", 12), rs1, rd, inst.m_line)];
                     }
                 case "ori":
                     {
@@ -302,173 +394,6 @@ namespace Assembler
                         imm = zext(GetFromIndexLittle(StringToBin(imm), 5, 0), 12);
                         imm = string.Concat(imm.AsSpan()[..1], "1", imm.AsSpan(2));
                         return [GetItypeInst(mnem, imm, rs1, rd, inst.m_line)];
-                    }
-                case "add":
-                    {
-                        // add rd,rs1,rs2
-                        // x[rd] = x[rs1] + x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-
-                    }
-                case "sub":
-                    {
-                        // sub rd,rs1,rs2
-                        // x[rd] = x[rs1] - x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "neg":
-                    {
-                        // neg rd,rs2
-                        // x[rd] = -x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
-                        return [GetRtypeInst("sub", GetRegisterIndex("zero", inst.m_line), rs2, rd, inst.m_line)];
-                    }
-                case "sll":
-                    {
-                        // sll rd,rs1,rs2
-                        // x[rd] = x[rs1] << x[rs2]
-                        // NOTE: Performs logical left shift on the value in register rs1 by the shift amount held in the
-                        // ```lower 5 bits of register rs2```
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "slt":
-                    {
-                        // slt rd,rs1,rs2
-                        // x[rd] = x[rs1] <s x[rs2]
-                        // x[rd] = (signed(x[rs1]) < signed(x[rs2])) ? 1 : 0
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "seq":
-                    {
-                        // seq rd,rs1,rs2
-                        // x[rd] = x[rs1] == x[rs2]
-                        // x[rd] = (x[rs1] == x[rs2]) ? 1 : 0
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "sne":
-                    {
-                        // sne rd,rs1,rs2
-                        // x[rd] = x[rs1] != x[rs2]
-                        // x[rd] = (x[rs1] != x[rs2]) ? 1 : 0
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "snez":
-                    {
-                        // snez rd,rs1
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        return [GetRtypeInst("sne", rs1, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
-                    }
-                case "seqz":
-                    {
-                        // snez rd,rs1
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        return [GetRtypeInst("seq", rs1, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
-                    }
-                case "sgt":
-                    {
-                        // sgt rd,rs1,rs2
-                        // x[rd] = x[rs1] >s x[rs2]
-                        // x[rd] = (signed(x[rs1]) > signed(x[rs2])) ? 1 : 0
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst("slt", rs2, rs1, rd, inst.m_line)]; // flipped the operands
-                    }
-                case "sltu":
-                    {
-                        // sltu rd,rs1,rs2
-                        // x[rd] = x[rs1] <u x[rs2]
-                        // x[rd] = (unsigned(x[rs1]) < unsigned(x[rs2])) ? 1 : 0
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "xor":
-                    {
-                        // xor rd,rs1,rs2
-                        // x[rd] = x[rs1] ^ x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "srl":
-                    {
-                        // srl rd,rs1,rs2
-                        // x[rd] = x[rs1] >>u x[rs2]
-                        // NOTE: Logical right shift on the value in register rs1 by the shift amount held in the
-                        // ```lower 5 bits of register rs2```
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "sra":
-                    {
-                        // sra rd,rs1,rs2
-                        // x[rd] = x[rs1] >>s x[rs2]
-                        // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
-                        // lower 5 bits of register rs2
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "or":
-                    {
-                        // or rd,rs1,rs2
-                        // x[rd] = x[rs1] | x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
-                    }
-                case "and":
-                    {
-                        // and rd,rs1,rs2
-                        // x[rd] = x[rs1] & x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
                     }
                 case "ecall":
                     {
@@ -542,6 +467,22 @@ namespace Assembler
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
                         return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
                     }
+                case "jalr":
+                    {
+                        // jalr rd,rs1,offset
+                        // t = pc+4;
+                        // pc = (x[rs1] + SignExtended(offset)) & ~1;
+                        // x[rd] = t
+                        // NOTE: the steps above are important and should be implemented exactly as shown
+                        CheckTokensCount(mnem, ts.Count, 4);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string offset = ts[3];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
+                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
+                    }
+                // end of I-TYPE instructions
+                // start of S-TYPE instructions
                 case "sb":
                     {
                         // sb rs2,offset(rs1)
@@ -590,66 +531,6 @@ namespace Assembler
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
                         return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
-                case "jal":
-                    {
-                        // jal rd,offset
-                        // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        return [GetUtypeInst(mnem, offset, rd, inst.m_line)];
-                    }
-                case "call":
-                    {
-                        // call offset
-                        // pc += SignExtended(offset)
-                        // call offset -> jal ra,offset
-                        CheckTokensCount(mnem, ts.Count, 2);
-                        string offset = ts[1];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        return [GetUtypeInst("jal", offset, GetRegisterIndex("ra", inst.m_line), inst.m_line)];
-                    }
-                case "j":
-                    {
-                        // j label
-                        // pc = label -> pc = pc + (label - pc) = pc + (offset)
-                        // j offset -> jal x0,offset
-                        CheckTokensCount(mnem, ts.Count, 2);
-                        string offset = ts[1];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
-                        return [GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
-                    }
-                case "jalr":
-                    {
-                        // jalr rd,rs1,offset
-                        // t = pc+4;
-                        // pc = (x[rs1] + SignExtended(offset)) & ~1;
-                        // x[rd] = t
-                        // NOTE: the steps above are important and should be implemented exactly as shown
-                        CheckTokensCount(mnem, ts.Count, 4);
-                        string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 11, 0);
-                        return [GetItypeInst(mnem, offset, rs1, rd, inst.m_line)];
-                    }
-                case "ret":
-                    {
-                        // ret
-                        // pc = ra
-                        CheckTokensCount(mnem, ts.Count, 1);
-                        return [GetItypeInst("jalr", zext("", 12), GetRegisterIndex("ra", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
-                    }
-                case "jr":
-                    {
-                        // jr rs1
-                        // pc = x[rs1]
-                        // jr rs1 -> jalr x0,rs1,0
-                        CheckTokensCount(mnem, ts.Count, 2);
-                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
-                        return [GetItypeInst("jalr", zext("", 12), rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
-                    }
                 case "beq":
                     {
                         // beq rs1,rs2,offset
@@ -660,16 +541,6 @@ namespace Assembler
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
-                    }
-                case "beqz":
-                    {
-                        // beqz rs1,offset
-                        // if (rs1 == rs2) pc += SignExtended(offset)
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
-                        string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "bne":
                     {
@@ -694,15 +565,6 @@ namespace Assembler
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
-                case "bltz":
-                    {
-                        // bltz rs1,offset
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
-                        string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
-                    }
                 case "bge":
                     {
                         // bge rs1,rs2,offset
@@ -714,15 +576,6 @@ namespace Assembler
                         string offset = ts[3];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
-                    }
-                case "bgez":
-                    {
-                        // bgez rs1,offset
-                        CheckTokensCount(mnem, ts.Count, 3);
-                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
-                        string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 case "bltu":
                     {
@@ -748,56 +601,212 @@ namespace Assembler
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
                         return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
                     }
-                // TODO: 1.50. bltu, 1.51. bgeu
-                case "mul":
+                // end of S-TYPE instructions
+                // start of U-TYPE instructions
+                case "lui":
                     {
-                        // mul rd,rs1,rs2
-                        // x[rd] = x[rs1] × x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
+                        // lui rd,imm
+                        // x[rd] = SignExtended(immediate[31:12] << 12)
+                        CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                        string imm = ts[2];
+                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
+                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
-                case "rem":
+                case "auipc":
                     {
-                        // rem rd,rs1,rs2
-                        // x[rd] = x[rs1] %s x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
+                        // auipc rd,imm
+                        // x[rd] = pc + SignExtended(immediate[31:12] << 12)
+                        CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                        string imm = ts[2];
+                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 31, 12);
+                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
-                case "remu":
+                case "jal":
                     {
-                        // remu rd,rs1,rs2
-                        // x[rd] = x[rs1] %u x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
+                        // jal rd,offset
+                        // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
+                        CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                        string offset = ts[2];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
+                        return [GetUtypeInst(mnem, offset, rd, inst.m_line)];
                     }
-                case "div":
+                case "addi20u": // user defined function
                     {
-                        // div rd,rs1,rs2
-                        // x[rd] = x[rs1] %s x[rs2]
-                        CheckTokensCount(mnem, ts.Count, 4);
+                        // addi20u rd,imm
+                        // x[rd] = x[rd] + ZeroExtended(imm[19:0])
+                        CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
-                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
-                        string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                        string imm = ts[2];
+                        imm = LibUtils.GetFromIndexLittle(StringToBin(imm), 19, 0);
+                        return [GetUtypeInst(mnem, imm, rd, inst.m_line)];
                     }
-                case "divu":
+                // end of U-TYPE instructions
+                // start of pseudo-Instructions
+                //----------------------------------------------------------------------------------------------------------------------------------
+                case "la":
                     {
-                        // divu rd,rs1,rs2
-                        // x[rd] = x[rs1] /u x[rs2]
+                        // la rd,symbol → ↓
+                        // lui rd, symbol[31:12] + (1 (if symbol[11:0] < 0))
+                        // addi rd, rd, symbol[11:0]
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string symbol = ts[2];
+                        symbol = StringToBin(symbol);
+                        // to account for the sign extension of symbol[11:0] in the addi instruction
+                        string imm12 = GetFromIndexLittle(symbol, 11, 0);
+                        string imm20_64 = GetFromIndexLittle(symbol, 31, 12);
+                        if (imm12[0] == '1')
+                            imm20_64 = GetFromIndexLittle(StringToBin((Convert.ToInt64(zext(imm20_64, 64), 2) + 1).ToString()), 19, 0);
+                        return [
+                            GetUtypeInst("lui", imm20_64, rd, inst.m_line),
+                            GetItypeInst("addi" , imm12, rd, rd, inst.m_line),
+                        ];
+                    }
+                case "li":
+                    {
+                        // li rd,immediate
+                        // x[rd] = SignExtended(immediate)
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string imm = ts[2];
+                        imm = StringToBin(imm);
+                        return [
+                                GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero", inst.m_line), rd, inst.m_line),
+                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 63, 44), rd, inst.m_line),
+                                GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
+                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 43, 24), rd, inst.m_line),
+                                GetItypeInst("slli", "000000010100", rd, rd, inst.m_line),
+                                GetUtypeInst("addi20u", GetFromIndexLittle(imm, 23, 4), rd, inst.m_line),
+                                GetItypeInst("slli", "000000000100", rd, rd, inst.m_line),
+                                GetUtypeInst("addi20u", zext(GetFromIndexLittle(imm, 3, 0), 20), rd, inst.m_line),
+                            ];
+                    }
+                case "nop":
+                    {
+                        // nop
+                        // nothing
+                        return [GetItypeInst("addi", zext("", 12), GetRegisterIndex("zero", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                    }
+                case "mv":
+                    {
+                        // mv rd,rs1
+                        // x[rd] = x[rs1]
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetItypeInst("addi", zext("", 12), rs1, rd, inst.m_line)];
+                    }
+                case "not":
+                    {
+                        // not rd,rs1
+                        // x[rd] = x[rs1] ^ SignExtended(-1)
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        return [GetItypeInst("xori", sext("1", 12), rs1, rd, inst.m_line)];
+                    }
+                case "neg":
+                    {
+                        // neg rd,rs2
+                        // x[rd] = -x[rs2]
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs2 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetRtypeInst("sub", GetRegisterIndex("zero", inst.m_line), rs2, rd, inst.m_line)];
+                    }
+                case "snez":
+                    {
+                        // snez rd,rs1
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetRtypeInst("sne", rs1, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
+                    }
+                case "seqz":
+                    {
+                        // snez rd,rs1
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rd = GetRegisterIndex(ts[1], inst.m_line);
+                        string rs1 = GetRegisterIndex(ts[2], inst.m_line);
+                        return [GetRtypeInst("seq", rs1, GetRegisterIndex("zero", inst.m_line), rd, inst.m_line)];
+                    }
+                case "sgt":
+                    {
+                        // sgt rd,rs1,rs2
+                        // x[rd] = x[rs1] >s x[rs2]
+                        // x[rd] = (signed(x[rs1]) > signed(x[rs2])) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[3], inst.m_line);
-                        return [GetRtypeInst(mnem, rs1, rs2, rd, inst.m_line)];
+                        return [GetRtypeInst("slt", rs2, rs1, rd, inst.m_line)]; // flipped the operands
+                    }
+                case "call":
+                    {
+                        // call offset
+                        // pc += SignExtended(offset)
+                        // call offset -> jal ra,offset
+                        CheckTokensCount(mnem, ts.Count, 2);
+                        string offset = ts[1];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
+                        return [GetUtypeInst("jal", offset, GetRegisterIndex("ra", inst.m_line), inst.m_line)];
+                    }
+                case "j":
+                    {
+                        // j label
+                        // pc = label -> pc = pc + (label - pc) = pc + (offset)
+                        // j offset -> jal x0,offset
+                        CheckTokensCount(mnem, ts.Count, 2);
+                        string offset = ts[1];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
+                        return [GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                    }
+                case "ret":
+                    {
+                        // ret
+                        // pc = ra
+                        CheckTokensCount(mnem, ts.Count, 1);
+                        return [GetItypeInst("jalr", zext("", 12), GetRegisterIndex("ra", inst.m_line), GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                    }
+                case "jr":
+                    {
+                        // jr rs1
+                        // pc = x[rs1]
+                        // jr rs1 -> jalr x0,rs1,0
+                        CheckTokensCount(mnem, ts.Count, 2);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        return [GetItypeInst("jalr", zext("", 12), rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                    }
+                case "beqz":
+                    {
+                        // beqz rs1,offset
+                        // if (rs1 == rs2) pc += SignExtended(offset)
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string offset = ts[2];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                        return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                    }
+                case "bltz":
+                    {
+                        // bltz rs1,offset
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string offset = ts[2];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                        return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                    }
+                case "bgez":
+                    {
+                        // bgez rs1,offset
+                        CheckTokensCount(mnem, ts.Count, 3);
+                        string rs1 = GetRegisterIndex(ts[1], inst.m_line);
+                        string offset = ts[2];
+                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                        return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
                     }
                 default:
                     {
