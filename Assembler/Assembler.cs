@@ -882,6 +882,8 @@ namespace Assembler
 
             for (int i = 0; i < code.Count; i++)
             {
+                // TODO: consume comments later not here, not like this
+                // can do it while tokenizing
                 if (!code[i].Item2.Contains(".string"))
                 {
                     int index = code[i].Item2.IndexOf('#');
