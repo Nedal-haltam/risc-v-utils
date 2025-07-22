@@ -882,9 +882,12 @@ namespace Assembler
 
             for (int i = 0; i < code.Count; i++)
             {
-                int index = code[i].Item2.IndexOf('#');
-                if (index != -1)
-                    code[i] = (code[i].Item1, code[i].Item2[..index]);
+                if (!code[i].Item2.Contains(".string"))
+                {
+                    int index = code[i].Item2.IndexOf('#');
+                    if (index != -1)
+                        code[i] = (code[i].Item1, code[i].Item2[..index]);
+                }
             }
             code.RemoveAll(x => string.IsNullOrEmpty(x.Item2) || string.IsNullOrWhiteSpace(x.Item2));
             for (int i = 0; i < code.Count; i++)
