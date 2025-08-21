@@ -157,18 +157,25 @@ public static class LibUtils
     public static string sext(string imm, int length) => imm.PadLeft(length, imm[0]);
     public static string zext(string imm, int length) => imm.PadLeft(length, '0');
 #pragma warning restore IDE1006 // Naming Styles
-    public static List<string> GetIM_INIT(List<string> MachinceCodes, List<Instruction> Instructions)
+    public static StringBuilder GetIM_INIT(List<string> MachinceCodes, List<Instruction> Instructions)
     {
-        Shartilities.UNUSED(MachinceCodes);
         Shartilities.UNUSED(Instructions);
-        Shartilities.TODO("GetIM_INIT is not implemented");
-        return [];
+        StringBuilder sb = new();
+        for (int i = 0; i < MachinceCodes.Count; i++)
+        {
+            sb.AppendLine($"InstMem[{i}] <= 32'b{MachinceCodes[i]};");
+        }
+        return sb;
     }
-    public static List<string> GetDM_INIT(List<string> DataMemoryValues)
+    public static StringBuilder GetDM_INIT(List<string> DataMemoryValues)
     {
-        Shartilities.UNUSED(DataMemoryValues);
-        Shartilities.TODO("GetDM_INIT is not implemented");
-        return [];
+        StringBuilder sb = new();
+        List<string> parsed = ParseDataMemoryValues(DataMemoryValues);
+        for (int i = 0; i < parsed.Count; i++)
+        {
+            sb.AppendLine($"DataMem[{i}] <= 8'd{parsed[i]};");
+        }
+        return sb;
     }
     public static List<string> GetIM(List<string> MachinceCodes)
     {
