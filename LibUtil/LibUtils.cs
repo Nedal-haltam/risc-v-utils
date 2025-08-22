@@ -281,7 +281,7 @@ public static class LibUtils
         {
             long signed = Convert.ToInt64(reg, 2);
             ulong unsigned = Convert.ToUInt64(reg, 2);
-            sb.Append($"index = {i++,10} , reg_out : signed = {signed,10} , unsigned = {unsigned,10}\n");
+            sb.Append($"index = {i++,10} , reg_out : signed = {signed,20} , unsigned = {unsigned,20}\n");
         }
         return sb;
     }
@@ -294,7 +294,7 @@ public static class LibUtils
         {
             sbyte signed = Convert.ToSByte(mem, 2);
             byte unsigned = Convert.ToByte(mem, 2);
-            sb.Append($"Mem[{i++,4}] = signed = {signed,3} , unsigned = {unsigned,3}\n");
+            sb.Append($"Mem[{i++,4}] = signed = {signed,5} , unsigned = {unsigned,3}\n");
         }
         return sb;
     }
