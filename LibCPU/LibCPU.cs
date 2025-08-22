@@ -608,7 +608,7 @@ namespace LibCPU
                                     (int rs1, string imm12, int rd) = GetItypeInst(mc);
                                     long t = PC + 4;
                                     long imm = Convert.ToInt64(sext(imm12, 64), 2);
-                                    PC = RegisterFile[rs1] + (imm & ~1);
+                                    PC = (RegisterFile[rs1] + imm) & ~1;
                                     RegisterFile[rd] = t;
                                     break;
                                 }
