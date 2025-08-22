@@ -314,7 +314,7 @@ namespace Assembler
                         // sltiu rd,rs1,imm
                         // x[rd] = x[rs1] <u SignExtended(immediate)
                         // the difference is that the numbers are treated as unsigned instead
-                        // x[rd] = (unsigned(x[rs1]) < unsigned(ZeroExtended(immediate))) ? 1 : 0
+                        // x[rd] = (unsigned(x[rs1]) < unsigned(SignExtended(immediate))) ? 1 : 0
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
