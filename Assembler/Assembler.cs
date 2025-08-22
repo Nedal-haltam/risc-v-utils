@@ -626,14 +626,14 @@ namespace Assembler
                 case "jal":
                     {
                         // jal rd,offset
-                        // x[rd] = pc+4; pc += SignExtended(offset) // this is an offset which is added to the pc not the final address
+                        // x[rd] = pc+4; pc += SignExtended(offset)
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1); // offset = offset[20:1]
                         return [GetUtypeInst(mnem, offset, rd, inst.m_line)];
                     }
-                case "addi20u": // user defined function
+                case "addi20u": // user defined instruction
                     {
                         // addi20u rd,imm
                         // x[rd] = x[rd] + ZeroExtended(imm[19:0])
