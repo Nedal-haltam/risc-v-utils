@@ -520,14 +520,22 @@ namespace LibCPU
                         ConsumeIType(mc, rs1, imm12, rd);
                         break;
                     }
-                case "1110011": // "ecall"
+                case "1110011":
                     {
+                        string Funct12 = GetFromIndexLittle(mc, 31, 20);
                         switch (Funct3)
                         {
                             case "000":
                                 {
-                                    ECALL();
-                                    PC += 4;
+                                    switch(Funct12)
+                                    {
+                                        case "000000000000": // "ecall"
+                                            {
+                                                ECALL();
+                                                PC += 4;
+                                                break;
+                                            }
+                                    }
                                     break;
                                 }
                             default:
