@@ -164,10 +164,10 @@ public static class LibUtils
         int index = 0;
         for (int i = 0; i < MachinceCodes.Count; i++)
         {
-            sb.AppendLine($"InstMem[{index++}] <= 32'b{GetFromIndexLittle(MachinceCodes[i], (8 * 1) - 1, 8 * 0)};");
-            sb.AppendLine($"InstMem[{index++}] <= 32'b{GetFromIndexLittle(MachinceCodes[i], (8 * 2) - 1, 8 * 1)};");
-            sb.AppendLine($"InstMem[{index++}] <= 32'b{GetFromIndexLittle(MachinceCodes[i], (8 * 3) - 1, 8 * 2)};");
-            sb.AppendLine($"InstMem[{index++}] <= 32'b{GetFromIndexLittle(MachinceCodes[i], (8 * 4) - 1, 8 * 3)};");
+            sb.AppendLine($"InstMem[{index++}] <= 8'b{GetFromIndexLittle(MachinceCodes[i], (8 * 1) - 1, 8 * 0)};");
+            sb.AppendLine($"InstMem[{index++}] <= 8'b{GetFromIndexLittle(MachinceCodes[i], (8 * 2) - 1, 8 * 1)};");
+            sb.AppendLine($"InstMem[{index++}] <= 8'b{GetFromIndexLittle(MachinceCodes[i], (8 * 3) - 1, 8 * 2)};");
+            sb.AppendLine($"InstMem[{index++}] <= 8'b{GetFromIndexLittle(MachinceCodes[i], (8 * 4) - 1, 8 * 3)};");
         }
         return sb;
     }
