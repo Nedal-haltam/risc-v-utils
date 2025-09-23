@@ -201,7 +201,7 @@ namespace LibCPU
                         {
                             case "0000000": // "sll"
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] << ((int)(RegisterFile[rs2] & 0x1F));
+                                    RegisterFile[rd] = RegisterFile[rs1] << ((int)(RegisterFile[rs2] & 0x3F));
                                     PC += 4;
                                     break;
                                 }
@@ -293,13 +293,13 @@ namespace LibCPU
                         {
                             case "0000000": // "srl"
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] >>> ((int)(RegisterFile[rs2] & 0x1F));
+                                    RegisterFile[rd] = RegisterFile[rs1] >>> ((int)(RegisterFile[rs2] & 0x3F));
                                     PC += 4;
                                     break;
                                 }
                             case "0100000": // "sra"
                                 {
-                                    RegisterFile[rd] = RegisterFile[rs1] >> ((int)(RegisterFile[rs2] & 0x1F));
+                                    RegisterFile[rd] = RegisterFile[rs1] >> ((int)(RegisterFile[rs2] & 0x3F));
                                     PC += 4;
                                     break;
                                 }
@@ -475,7 +475,8 @@ namespace LibCPU
                 {
                     while (StringLitLength-- > 0)
                     {
-                        buffer.Append((char)Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2));
+                        byte b = Convert.ToByte(DataMemory.GetByte((int)StringLitAddress), 2);
+                        buffer.Append((char)b);
                         StringLitAddress++;
                     }
                     Console.Write(buffer.ToString());

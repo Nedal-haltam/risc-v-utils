@@ -139,7 +139,7 @@ namespace Assembler
                         // sll rd,rs1,rs2
                         // x[rd] = x[rs1] << x[rs2]
                         // NOTE: Performs logical left shift on the value in register rs1 by the shift amount held in the
-                        // ```lower 5 bits of register rs2```
+                        // ```lower 6 bits of register rs2```
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
@@ -215,7 +215,7 @@ namespace Assembler
                         // srl rd,rs1,rs2
                         // x[rd] = x[rs1] >>u x[rs2]
                         // NOTE: Logical right shift on the value in register rs1 by the shift amount held in the
-                        // ```lower 5 bits of register rs2```
+                        // ```lower 6 bits of register rs2```
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
@@ -227,7 +227,7 @@ namespace Assembler
                         // sra rd,rs1,rs2
                         // x[rd] = x[rs1] >>s x[rs2]
                         // NOTE: Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
-                        // lower 5 bits of register rs2
+                        // lower 6 bits of register rs2
                         CheckTokensCount(mnem, ts.Count, 4);
                         string rd = GetRegisterIndex(ts[1], inst.m_line);
                         string rs1 = GetRegisterIndex(ts[2], inst.m_line);
