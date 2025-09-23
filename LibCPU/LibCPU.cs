@@ -424,7 +424,9 @@ namespace LibCPU
                     }
                 case "001": // "slli"
                     {
-                        long imm = Convert.ToInt64(zext(imm12, 64), 2);
+                        ulong imm = (ulong)Convert.ToInt64(zext(imm12, 64), 2);
+                        if (imm > 63)
+                            Shartilities.Logln(Shartilities.LogType.ERROR, $"Error: improper shift amount ({imm})", 1);
                         RegisterFile[rd] = RegisterFile[rs1] << (int)imm;
                         PC += 4;
                         break;
@@ -435,14 +437,18 @@ namespace LibCPU
                         {
                             case "0000000": // "srli"
                                 {
-                                    long imm = Convert.ToInt64(zext(imm12, 64), 2);
+                                    ulong imm = (ulong)Convert.ToInt64(zext(imm12, 64), 2);
+                                    if (imm > 63)
+                                        Shartilities.Logln(Shartilities.LogType.ERROR, $"Error: improper shift amount ({imm})", 1);
                                     RegisterFile[rd] = RegisterFile[rs1] >>> (int)imm;
                                     PC += 4;
                                     break;
                                 }
                             case "0100000": // "srai"
                                 {
-                                    long imm = Convert.ToInt64(zext(imm12, 64), 2);
+                                    ulong imm = (ulong)Convert.ToInt64(zext(imm12, 64), 2);
+                                    if (imm > 63)
+                                        Shartilities.Logln(Shartilities.LogType.ERROR, $"Error: improper shift amount ({imm})", 1);
                                     RegisterFile[rd] = RegisterFile[rs1] >> (int)imm;
                                     PC += 4;
                                     break;
