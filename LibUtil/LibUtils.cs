@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.Design;
 using System.Globalization;
+using System.Net;
 using System.Text;
 
 public static class LibUtils
@@ -179,6 +180,25 @@ public static class LibUtils
         {
             sb.AppendLine($"DataMem[{i}] <= 8'd{parsed[i]};");
         }
+        return sb;
+    }
+    public static StringBuilder GetDMMIF(List<string> DataMemoryValues)
+    {
+        StringBuilder sb = new();
+
+        sb.AppendLine($"WIDTH=64;");
+        sb.AppendLine($"DEPTH=8192;");
+        sb.AppendLine($"ADDRESS_RADIX=DEC;");
+        sb.AppendLine($"DATA_RADIX=DEC;");
+        sb.AppendLine("CONTENT BEGIN");
+        List<string> parsed = ParseDataMemoryValues(DataMemoryValues);
+        int i = 0;
+        for (i = 0; i < parsed.Count; i++)
+        {
+            sb.AppendLine($"{i} : {parsed[i]};");
+        }
+        sb.AppendLine($"[{i}..8191] : 0;");
+        sb.AppendLine("END");
         return sb;
     }
     public static List<string> GetIM(List<string> MachinceCodes)
