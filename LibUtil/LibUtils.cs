@@ -201,6 +201,24 @@ public static class LibUtils
         sb.AppendLine("END");
         return sb;
     }
+    public static StringBuilder GetIMMIF(List<string> MachinceCodes)
+    {
+        StringBuilder sb = new();
+
+        sb.AppendLine($"WIDTH=32;");
+        sb.AppendLine($"DEPTH=8192;");
+        sb.AppendLine($"ADDRESS_RADIX=DEC;");
+        sb.AppendLine($"DATA_RADIX=BIN;");
+        sb.AppendLine("CONTENT BEGIN");
+        int i = 0;
+        for (i = 0; i < MachinceCodes.Count; i++)
+        {
+            sb.AppendLine($"{i} : {MachinceCodes[i]};");
+        }
+        sb.AppendLine($"[{i}..8191] : {"".PadLeft(32, '0')};");
+        sb.AppendLine("END");
+        return sb;
+    }
     public static List<string> GetIM(List<string> MachinceCodes)
     {
         return MachinceCodes;
