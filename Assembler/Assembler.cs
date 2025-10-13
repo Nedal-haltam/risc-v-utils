@@ -1,4 +1,6 @@
-﻿using static LibUtils;
+﻿using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using static LibUtils;
 namespace Assembler
 {
     public static class Assembler
@@ -93,6 +95,19 @@ namespace Assembler
             return "";
         }
         static void CheckTokensCount(string mnem, int have, int want) => Shartilities.Assert(have == want, $"invalid {mnem} instruction number of tokens is not {want}");
+        static string InvertedBranchMnem(string mnem)
+        {
+            return mnem switch
+            {
+                "beq" => "bne",
+                "bne" => "beq",
+                "blt" => "bge",
+                "bge" => "blt",
+                "bltu" => "bgeu",
+                "bgeu" => "bltu",
+                _ => "not a branch",
+            };
+        }
         static List<string> Instruction2MachineCodes(Instruction inst)
         {
             // references:
@@ -539,8 +554,24 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // bne rs1, rs2, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        }
                     }
                 case "bne":
                     {
@@ -550,8 +581,24 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // beq rs1, rs2, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        }
                     }
                 case "blt":
                     {
@@ -562,8 +609,24 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // bge rs1, rs2, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        }
                     }
                 case "bge":
                     {
@@ -574,8 +637,24 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // blt rs1, rs2, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        }
                     }
                 case "bltu":
                     {
@@ -586,8 +665,24 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // bgeu rs1, rs2, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        }
                     }
                 case "bgeu":
                     {
@@ -598,8 +693,24 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // bltu rs1, rs2, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst(mnem, offset, rs1, rs2, inst.m_line)];
+                        }
                     }
                 // end of S-TYPE instructions
                 // start of U-TYPE instructions
@@ -787,8 +898,24 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // bne rs1, zero, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem("beq"), skip, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst("beq", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                        }
                     }
                 case "bltz":
                     {
@@ -796,8 +923,24 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // bge rs1, zero, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem("blt"), skip, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst("blt", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                        }
                     }
                 case "bgez":
                     {
@@ -805,8 +948,24 @@ namespace Assembler
                         CheckTokensCount(mnem, ts.Count, 3);
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
-                        offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
-                        return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                        long jumpbytes = StringToLong(offset);
+                        if (Math.Abs(jumpbytes) > 4096)
+                        {
+                            // blt rs1, zero, skip
+                            // jal x0, offset
+                            //skip:
+                            string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            return [
+                                GetStypeInst(InvertedBranchMnem("bge"), skip, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                                GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
+                            ];
+                        }
+                        else
+                        {
+                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 12, 1);
+                            return [GetStypeInst("bge", offset, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line)];
+                        }
                     }
                 default:
                     {

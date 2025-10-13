@@ -114,7 +114,7 @@ namespace LibCPU
     public static class SingleCycle
     {
         ///////////////////////////////////////////////
-        const int MAX_CLOCKS = 100 * 1000 * 1000;
+        const int MAX_CLOCKS = 1000 * 1000 * 1000;
         static List<string> InstructionMemory = [];
         static RegisterFile RegisterFile;
         static Memory DataMemory;
