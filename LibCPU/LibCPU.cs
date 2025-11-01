@@ -1,7 +1,10 @@
+using System;
 using System.Data;
+using System.Net;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography;
 using System.Text;
+using System.Transactions;
 using static LibUtils;
 
 namespace LibCPU
@@ -40,7 +43,7 @@ namespace LibCPU
         // list of byte in base-2
         private readonly List<string> m_Memory;
         private readonly uint m_DM_SIZE;
-        public Memory(List<string> DataMemoryInit, uint DM_SIZE)
+        public Memory(List<string> DataMemoryInit, uint DM_SIZE, out int n)
         {
             m_DM_SIZE = DM_SIZE;
             m_Memory = [];
@@ -58,6 +61,7 @@ namespace LibCPU
             int dmcount = m_Memory.Count;
             string zero = zext("", 8);
             for (uint i = 0; i < DM_SIZE - dmcount; i++) m_Memory.Add(zero);
+            n = dmcount;
         }
         public readonly void Clear()
         {
@@ -818,7 +822,7 @@ namespace LibCPU
                 // end of U-TYPE instructions
             }
         }
-        public static void Run(List<string> MachingCodes, List<string> DataMemoryInit, uint IM_SIZE, uint DM_SIZE, string? inputOutputFilePath = null)
+        public static void Run(List<string> MachingCodes, List<string> DataMemoryInit, uint IM_SIZE, uint DM_SIZE, List<string> ClArgs, string? inputOutputFilePath = null)
         {
             PC = 0;
             CyclesConsumed = 0;
@@ -826,7 +830,28 @@ namespace LibCPU
             InstructionMemory = [];
             RegisterFile = new();
             RegisterFile[REG_LIST["sp"].Item2] = DM_SIZE;
-            DataMemory = new(DataMemoryInit, DM_SIZE);
+            DataMemory = new(DataMemoryInit, DM_SIZE, out int n);
+            n++;
+
+            List<long> ClArgsAddresses = [];
+            for (int i = 0; i < ClArgs.Count; i++)
+            {
+                string arg = ClArgs[i];
+                ClArgsAddresses.Add(n);
+                foreach (char c in arg)
+                    DataMemory.SetByte(n++, zext(Convert.ToString((byte)c, 2), 8));
+                DataMemory.SetByte(n++, zext("", 8));
+            }
+
+            long AddressOfPointer = n;
+            foreach (long addr in ClArgsAddresses)
+            {
+                DataMemory.SetDoubleWord(n, zext(Convert.ToString(addr, 2), 64));
+                n += 8;
+            }
+
+            RegisterFile[REG_LIST["a0"].Item2] = ClArgs.Count;
+            RegisterFile[REG_LIST["a1"].Item2] = AddressOfPointer;
 
             foreach (string code in MachingCodes)
             {
