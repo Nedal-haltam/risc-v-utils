@@ -1034,7 +1034,6 @@ namespace Assembler
             LOG_INSTRUCTIONS = LOG_INST_FLAG;
             string src = File.ReadAllText(FilePath);
             SrcFilePath = FilePath;
-
             List<string> splitted = [.. src.Split('\n')];
             List<int> lines = [.. Enumerable.Range(1, splitted.Count)];
             List<(int, string)> code = [.. lines.Zip(splitted)];
@@ -1156,10 +1155,15 @@ namespace Assembler
                                             j++;
                                             j++;
                                         }
-                                    }
-                                    else
-                                    {
-                                        Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported escape character in string literal {StringLit}\n", 1);
+                                        else if (j + 3 < StringLit.Length - 1 && $"{StringLit[(j + 1)..(j + 4)]}" == "033")
+                                        {
+                                            temp.Add("\u001b");
+                                            j += 4;
+                                        }
+                                        else
+                                        {
+                                            Shartilities.Log(Shartilities.LogType.ERROR, $"{SrcFilePath}:{line}:1: unsupported escape character in string literal {StringLit}\n", 1);
+                                        }
                                     }
                                 }
                                 else
