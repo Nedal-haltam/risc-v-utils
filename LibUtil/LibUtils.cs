@@ -182,12 +182,12 @@ public static class LibUtils
         }
         return sb;
     }
-    public static StringBuilder GetDMMIF(List<string> DataMemoryValues)
+    public static StringBuilder GetDMMIF(List<string> DataMemoryValues, uint size)
     {
         StringBuilder sb = new();
 
         sb.AppendLine($"WIDTH=64;");
-        sb.AppendLine($"DEPTH=8192;");
+        sb.AppendLine($"DEPTH={size};");
         sb.AppendLine($"ADDRESS_RADIX=DEC;");
         sb.AppendLine($"DATA_RADIX=DEC;");
         sb.AppendLine("CONTENT BEGIN");
@@ -197,16 +197,16 @@ public static class LibUtils
         {
             sb.AppendLine($"{i} : {parsed[i]};");
         }
-        sb.AppendLine($"[{i}..8191] : 0;");
+        sb.AppendLine($"[{i}..{size - 1}] : 0;");
         sb.AppendLine("END");
         return sb;
     }
-    public static StringBuilder GetIMMIF(List<string> MachinceCodes)
+    public static StringBuilder GetIMMIF(List<string> MachinceCodes, uint size)
     {
         StringBuilder sb = new();
 
         sb.AppendLine($"WIDTH=32;");
-        sb.AppendLine($"DEPTH=8192;");
+        sb.AppendLine($"DEPTH={size};");
         sb.AppendLine($"ADDRESS_RADIX=DEC;");
         sb.AppendLine($"DATA_RADIX=BIN;");
         sb.AppendLine("CONTENT BEGIN");
@@ -215,7 +215,7 @@ public static class LibUtils
         {
             sb.AppendLine($"{i} : {MachinceCodes[i]};");
         }
-        sb.AppendLine($"[{i}..8191] : {"".PadLeft(32, '0')};");
+        sb.AppendLine($"[{i}..{size - 1}] : {"".PadLeft(32, '0')};");
         sb.AppendLine("END");
         return sb;
     }
