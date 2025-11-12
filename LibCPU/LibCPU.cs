@@ -829,7 +829,7 @@ namespace LibCPU
             OutputFilePath = inputOutputFilePath;
             InstructionMemory = [];
             RegisterFile = new();
-            RegisterFile[REG_LIST["sp"].Item2] = DM_SIZE;
+            RegisterFile[REG_LIST["sp"].Item2] = DM_SIZE - 1024;
             DataMemory = new(DataMemoryInit, DM_SIZE, out int n);
             n++;
 
