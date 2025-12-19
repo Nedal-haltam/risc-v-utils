@@ -555,13 +555,14 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // bne rs1, rs2, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -582,13 +583,14 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // beq rs1, rs2, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -610,13 +612,14 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // bge rs1, rs2, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -638,13 +641,14 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // blt rs1, rs2, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -666,13 +670,14 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // bgeu rs1, rs2, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -694,13 +699,14 @@ namespace Assembler
                         string rs2 = GetRegisterIndex(ts[2], inst.m_line);
                         string offset = ts[3];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // bltu rs1, rs2, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem(mnem), skip, rs1, rs2, inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -899,13 +905,14 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // bne rs1, zero, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem("beq"), skip, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -924,13 +931,14 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // bge rs1, zero, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem("blt"), skip, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -949,13 +957,14 @@ namespace Assembler
                         string rs1 = GetRegisterIndex(ts[1], inst.m_line);
                         string offset = ts[2];
                         long jumpbytes = StringToLong(offset);
-                        if (Math.Abs(jumpbytes) > 4096)
+                        //if (Math.Abs(jumpbytes) > 4096)
+                        if (true)
                         {
                             // blt rs1, zero, skip
                             // jal x0, offset
                             //skip:
                             string skip = LibUtils.GetFromIndexLittle(StringToBin("8"), 12, 1);
-                            offset = LibUtils.GetFromIndexLittle(StringToBin(offset), 20, 1);
+                            offset = LibUtils.GetFromIndexLittle(StringToBin((StringToLong(offset) - 4).ToString()), 20, 1);
                             return [
                                 GetStypeInst(InvertedBranchMnem("bge"), skip, rs1, GetRegisterIndex("zero", inst.m_line), inst.m_line),
                                 GetUtypeInst("jal", offset, GetRegisterIndex("zero", inst.m_line), inst.m_line),
@@ -1026,6 +1035,7 @@ namespace Assembler
             {
                 "li" => 32,
                 "la" => 8,
+                "beq" or "bne" or "blt" or "bge" or "bltu" or "bgeu" or "beqz" or "bltz" or "bgez" => 8,
                 _ => 4,
             };
         }
