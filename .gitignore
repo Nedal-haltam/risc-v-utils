@@ -1,11 +1,10 @@
 
-*
-!*/
-!*.cs
-!*.csproj
-!*.sln
-!.gitignore
-!.gitattributes
-/LibCPU/obj
-/LibUtil/obj
+/Assembler/bin
 /Assembler/obj
+/LibCPU/.vs
+/LibCPU/bin
+/LibCPU/obj
+LibUtil/.editorconfig
+/LibUtil/.vs
+/LibUtil/bin
+/LibUtil/obj
