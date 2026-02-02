@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <Reference Include="Shartilities">
-      <HintPath>..\..\Shartilities\bin\Debug\net8.0\Shartilities.dll</HintPath>
+      <HintPath>..\references\Shartilities.dll</HintPath>
     </Reference>
   </ItemGroup>
 
